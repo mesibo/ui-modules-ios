@@ -1,0 +1,14 @@
+DEBUG_LEVEL=0
+USE_LIBPHONE=0
+MODULE_NAME=mediapicker
+OUTDIR=/Users/yusuf/mesibo-ui
+FILEEXT=m
+MODULE_SRC    = $(wildcard *.m) $(wildcard */*.m) $(wildcard */*/*.m)
+MODULE_OBJ := $(patsubst %.m, $(BINDIR)/%.o, $(MODULE_SRC)) 
+EXTFRAMEWORKS_PATH=/Users/yusuf/mesibo-ui/ext-frameworks
+MODULE_CFLAGS = -fmodules -I../api -I$(EXTFRAMEWORKS_PATH)/ -I./ImagePicker -I./Utils -I./PEPhotoCropEditor -I./GMImagePicker -I./TODocumentPickerViewController -I./TODocumentPickerViewController/Views -I./TODocumentPickerViewController/Models -I./TODocumentPickerViewController/Controllers -I./TODocumentPickerViewController/Categories -I./ImagePicker/FaceBookControllers -I./ImageViewer
+include /Users/yusuf/mesibo/ioslib_objcpp.mk
+
+finalprivate:
+	@echo done
+

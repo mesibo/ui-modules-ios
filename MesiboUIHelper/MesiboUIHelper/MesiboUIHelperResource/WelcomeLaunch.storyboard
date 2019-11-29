@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="11762" systemVersion="15G31" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <device id="retina3_5" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="11757"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--Welcome Controller-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController storyboardIdentifier="WelcomeController" useStoryboardIdentifierAsRestorationIdentifier="YES" id="BYZ-38-t0r" customClass="WelcomeController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="y3c-jy-aDJ"/>
+                        <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="480"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" bounces="NO" pagingEnabled="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" translatesAutoresizingMaskIntoConstraints="NO" id="omQ-wv-3Z2">
+                                <rect key="frame" x="24" y="35" width="272" height="203"/>
+                            </scrollView>
+                            <pageControl opaque="NO" alpha="0.5" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" numberOfPages="5" translatesAutoresizingMaskIntoConstraints="NO" id="Lwc-sM-CuA">
+                                <rect key="frame" x="125" y="433" width="71" height="37"/>
+                            </pageControl>
+                            <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" bounces="NO" pagingEnabled="YES" showsHorizontalScrollIndicator="NO" showsVerticalScrollIndicator="NO" translatesAutoresizingMaskIntoConstraints="NO" id="bVc-fL-oz9">
+                                <rect key="frame" x="24" y="255" width="272" height="168"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="168" id="bVv-rw-6Wh"/>
+                                </constraints>
+                            </scrollView>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="lez-F1-rjP">
+                                <rect key="frame" x="24" y="435" width="50" height="32"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                                <state key="normal" title="Sign In">
+                                    <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
+                                <connections>
+                                    <action selector="onSkipIntro:" destination="BYZ-38-t0r" eventType="touchUpInside" id="mk4-Nw-NhF"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="fuT-Ti-4Zl">
+                                <rect key="frame" x="234" y="435" width="62" height="32"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                                <state key="normal" title="Next Big">
+                                    <color key="titleColor" red="1" green="1" blue="1" alpha="1" colorSpace="calibratedRGB"/>
+                                </state>
+                                <connections>
+                                    <action selector="onDoneIntro:" destination="BYZ-38-t0r" eventType="touchUpInside" id="kxr-LJ-GfY"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                        <color key="backgroundColor" red="0.011764705882352941" green="0.66274509803921566" blue="0.95686274509803915" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="lez-F1-rjP" firstAttribute="baseline" secondItem="fuT-Ti-4Zl" secondAttribute="baseline" id="2ox-Ua-zDb"/>
+                            <constraint firstAttribute="trailingMargin" secondItem="bVc-fL-oz9" secondAttribute="trailing" constant="8" id="DlM-Oo-M1J"/>
+                            <constraint firstItem="bVc-fL-oz9" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" constant="8" id="F5a-v2-uFr"/>
+                            <constraint firstItem="Lwc-sM-CuA" firstAttribute="top" secondItem="bVc-fL-oz9" secondAttribute="bottom" constant="10" id="Ihy-aZ-ADa"/>
+                            <constraint firstItem="omQ-wv-3Z2" firstAttribute="trailing" secondItem="bVc-fL-oz9" secondAttribute="trailing" id="Mzw-iN-Dcd"/>
+                            <constraint firstItem="omQ-wv-3Z2" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" constant="15" id="NqZ-0j-Hyb"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="Lwc-sM-CuA" secondAttribute="bottom" constant="10" id="OhD-w8-b8l"/>
+                            <constraint firstAttribute="trailingMargin" secondItem="fuT-Ti-4Zl" secondAttribute="trailing" constant="8" id="QeX-so-hIH"/>
+                            <constraint firstItem="omQ-wv-3Z2" firstAttribute="centerX" secondItem="Lwc-sM-CuA" secondAttribute="centerX" id="SmM-vt-igw"/>
+                            <constraint firstItem="omQ-wv-3Z2" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" constant="8" id="W8E-Rb-TZA"/>
+                            <constraint firstItem="lez-F1-rjP" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" constant="8" id="jug-Eu-H6D"/>
+                            <constraint firstItem="lez-F1-rjP" firstAttribute="centerY" secondItem="Lwc-sM-CuA" secondAttribute="centerY" id="ks8-PF-sX3"/>
+                            <constraint firstItem="omQ-wv-3Z2" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="meo-XV-iob"/>
+                            <constraint firstItem="bVc-fL-oz9" firstAttribute="top" secondItem="omQ-wv-3Z2" secondAttribute="bottom" constant="17" id="zMr-WN-VOC"/>
+                        </constraints>
+                    </view>
+                    <connections>
+                        <outlet property="mBannerScroll" destination="bVc-fL-oz9" id="sK6-su-WMQ"/>
+                        <outlet property="mDoneButton" destination="fuT-Ti-4Zl" id="Ilj-R2-i9x"/>
+                        <outlet property="mPicturePageControl" destination="Lwc-sM-CuA" id="GBq-RC-n0m"/>
+                        <outlet property="mPictureScroll" destination="omQ-wv-3Z2" id="W9B-mP-g2v"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="128" y="317"/>
+        </scene>
+    </scenes>
+    <simulatedMetricsContainer key="defaultSimulatedMetrics">
+        <simulatedStatusBarMetrics key="statusBar"/>
+        <simulatedOrientationMetrics key="orientation"/>
+        <simulatedScreenMetrics key="destination"/>
+    </simulatedMetricsContainer>
+</document>

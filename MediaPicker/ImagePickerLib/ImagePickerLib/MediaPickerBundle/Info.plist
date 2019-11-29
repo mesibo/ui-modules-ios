@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>So that Mesibo enables you to send your location</string>
+	<key>FacebookDisplayName</key>
+	<string>Mesibo</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>So that Mesibo let you send your media files</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>So that Mesibo enables you to send your location</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>So that Mesibo enables you to make calls</string>
+	<key>UILaunchStoryboardName</key>
+	<string>Main</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>CFBundleDisplayName</key>
+	<string></string>
+	<key>CFBundleSupportedPlatforms</key>
+	<string>iPhoneOS</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>So that Mesibo enables you to send pictures</string>
+	<key>NSCameraUsageDescription</key>
+	<string>So that Mesibo enables you to take pictures</string>
+	<key>FacebookAppID</key>
+	<string>1662437040686847</string>
+	<key>NSLocationUsageDescription</key>
+	<string>So that Mesibo enables you to send your location</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.1</string>
+</dict>
+</plist>

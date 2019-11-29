@@ -1,0 +1,480 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3EA48EDB1E38863600492966 /* MesiboUIHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 3EA48EDA1E38863600492966 /* MesiboUIHelper.m */; };
+		3EA48EF61E3887BA00492966 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3EA48EEE1E3887BA00492966 /* Main.storyboard */; };
+		3EA48EF71E3887BA00492966 /* WelcomeLaunch.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3EA48EEF1E3887BA00492966 /* WelcomeLaunch.storyboard */; };
+		3EA48EF81E3887BA00492966 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3EA48EF01E3887BA00492966 /* Assets.xcassets */; };
+		3EA48EFB1E3887BA00492966 /* tutorial_phone.png in Resources */ = {isa = PBXBuildFile; fileRef = 3EA48EF31E3887BA00492966 /* tutorial_phone.png */; };
+		3EA48EFC1E3887BA00492966 /* fd.png in Resources */ = {isa = PBXBuildFile; fileRef = 3EA48EF41E3887BA00492966 /* fd.png */; };
+		3EA48EFD1E3887BA00492966 /* dj.png in Resources */ = {isa = PBXBuildFile; fileRef = 3EA48EF51E3887BA00492966 /* dj.png */; };
+		8880D8181EA0B6BB004D5121 /* UIHelperImageUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 8880D8171EA0B6BB004D5121 /* UIHelperImageUtils.m */; };
+		88AD36981E4458D600A0241E /* basicViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD36841E4458D600A0241E /* basicViewController.m */; };
+		88AD36991E4458D600A0241E /* countryTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD36861E4458D600A0241E /* countryTableViewController.m */; };
+		88AD369A1E4458D600A0241E /* LoginUImanager.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD36891E4458D600A0241E /* LoginUImanager.m */; };
+		88AD369B1E4458D600A0241E /* registerMobileViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD368B1E4458D600A0241E /* registerMobileViewController.m */; };
+		88AD369C1E4458D600A0241E /* Strings.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD368D1E4458D600A0241E /* Strings.m */; };
+		88AD369D1E4458D600A0241E /* UIAlertsDialogue.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD368F1E4458D600A0241E /* UIAlertsDialogue.m */; };
+		88AD369E1E4458D600A0241E /* UIColors.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD36911E4458D600A0241E /* UIColors.m */; };
+		88AD369F1E4458D600A0241E /* UITextField+Extended.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD36931E4458D600A0241E /* UITextField+Extended.m */; };
+		88AD36A01E4458D600A0241E /* verifyMobileViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD36951E4458D600A0241E /* verifyMobileViewController.m */; };
+		88AD36A11E4458D600A0241E /* WelcomeController.m in Sources */ = {isa = PBXBuildFile; fileRef = 88AD36971E4458D600A0241E /* WelcomeController.m */; };
+		88AD36A41E445FC500A0241E /* MesiboUIHelper.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3EA48ED91E38863600492966 /* MesiboUIHelper.h */; };
+		88AD36A51E445FCE00A0241E /* libMesiboUIHelper.a in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3EA48ED61E38863500492966 /* libMesiboUIHelper.a */; };
+		88AD36A61E445FD300A0241E /* MesiboUIHelperResource.bundle in CopyFiles */ = {isa = PBXBuildFile; fileRef = 3EA48EE81E38878A00492966 /* MesiboUIHelperResource.bundle */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3EA48F241E3888C000492966 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3EA48ECE1E38863400492966 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3EA48EE71E38878A00492966;
+			remoteInfo = MesiboUIHelperResource;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3EA48ED41E38863500492966 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "/Users/yusuf/mesibo-ui/MesiboUIHelper/output";
+			dstSubfolderSpec = 0;
+			files = (
+				88AD36A61E445FD300A0241E /* MesiboUIHelperResource.bundle in CopyFiles */,
+				88AD36A51E445FCE00A0241E /* libMesiboUIHelper.a in CopyFiles */,
+				88AD36A41E445FC500A0241E /* MesiboUIHelper.h in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		3EA48ED61E38863500492966 /* libMesiboUIHelper.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libMesiboUIHelper.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		3EA48ED91E38863600492966 /* MesiboUIHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MesiboUIHelper.h; sourceTree = "<group>"; };
+		3EA48EDA1E38863600492966 /* MesiboUIHelper.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MesiboUIHelper.m; sourceTree = "<group>"; };
+		3EA48EE81E38878A00492966 /* MesiboUIHelperResource.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MesiboUIHelperResource.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		3EA48EEE1E3887BA00492966 /* Main.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = Main.storyboard; sourceTree = "<group>"; };
+		3EA48EEF1E3887BA00492966 /* WelcomeLaunch.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = WelcomeLaunch.storyboard; sourceTree = "<group>"; };
+		3EA48EF01E3887BA00492966 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3EA48EF31E3887BA00492966 /* tutorial_phone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = tutorial_phone.png; sourceTree = "<group>"; };
+		3EA48EF41E3887BA00492966 /* fd.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = fd.png; sourceTree = "<group>"; };
+		3EA48EF51E3887BA00492966 /* dj.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = dj.png; sourceTree = "<group>"; };
+		8880D8161EA0B6BB004D5121 /* UIHelperImageUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UIHelperImageUtils.h; sourceTree = "<group>"; };
+		8880D8171EA0B6BB004D5121 /* UIHelperImageUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIHelperImageUtils.m; sourceTree = "<group>"; };
+		8899636A1E93C9FD00FE21EB /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		88AD36831E4458D600A0241E /* basicViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = basicViewController.h; sourceTree = "<group>"; };
+		88AD36841E4458D600A0241E /* basicViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = basicViewController.m; sourceTree = "<group>"; };
+		88AD36851E4458D600A0241E /* countryTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = countryTableViewController.h; sourceTree = "<group>"; };
+		88AD36861E4458D600A0241E /* countryTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = countryTableViewController.m; sourceTree = "<group>"; };
+		88AD36871E4458D600A0241E /* LoginConfiguration.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LoginConfiguration.h; sourceTree = "<group>"; };
+		88AD36881E4458D600A0241E /* LoginUImanager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LoginUImanager.h; sourceTree = "<group>"; };
+		88AD36891E4458D600A0241E /* LoginUImanager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LoginUImanager.m; sourceTree = "<group>"; };
+		88AD368A1E4458D600A0241E /* registerMobileViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = registerMobileViewController.h; sourceTree = "<group>"; };
+		88AD368B1E4458D600A0241E /* registerMobileViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = registerMobileViewController.m; sourceTree = "<group>"; };
+		88AD368C1E4458D600A0241E /* Strings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Strings.h; sourceTree = "<group>"; };
+		88AD368D1E4458D600A0241E /* Strings.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Strings.m; sourceTree = "<group>"; };
+		88AD368E1E4458D600A0241E /* UIAlertsDialogue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UIAlertsDialogue.h; sourceTree = "<group>"; };
+		88AD368F1E4458D600A0241E /* UIAlertsDialogue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIAlertsDialogue.m; sourceTree = "<group>"; };
+		88AD36901E4458D600A0241E /* UIColors.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = UIColors.h; sourceTree = "<group>"; };
+		88AD36911E4458D600A0241E /* UIColors.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = UIColors.m; sourceTree = "<group>"; };
+		88AD36921E4458D600A0241E /* UITextField+Extended.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UITextField+Extended.h"; sourceTree = "<group>"; };
+		88AD36931E4458D600A0241E /* UITextField+Extended.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UITextField+Extended.m"; sourceTree = "<group>"; };
+		88AD36941E4458D600A0241E /* verifyMobileViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = verifyMobileViewController.h; sourceTree = "<group>"; };
+		88AD36951E4458D600A0241E /* verifyMobileViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = verifyMobileViewController.m; sourceTree = "<group>"; };
+		88AD36961E4458D600A0241E /* WelcomeController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WelcomeController.h; sourceTree = "<group>"; };
+		88AD36971E4458D600A0241E /* WelcomeController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WelcomeController.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3EA48ED31E38863500492966 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3EA48EE51E38878A00492966 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3EA48ECD1E38863400492966 = {
+			isa = PBXGroup;
+			children = (
+				3EA48ED81E38863500492966 /* MesiboUIHelper */,
+				3EA48EE91E38878A00492966 /* MesiboUIHelperResource */,
+				3EA48ED71E38863500492966 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3EA48ED71E38863500492966 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3EA48ED61E38863500492966 /* libMesiboUIHelper.a */,
+				3EA48EE81E38878A00492966 /* MesiboUIHelperResource.bundle */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3EA48ED81E38863500492966 /* MesiboUIHelper */ = {
+			isa = PBXGroup;
+			children = (
+				8880D8161EA0B6BB004D5121 /* UIHelperImageUtils.h */,
+				8880D8171EA0B6BB004D5121 /* UIHelperImageUtils.m */,
+				88AD36831E4458D600A0241E /* basicViewController.h */,
+				88AD36841E4458D600A0241E /* basicViewController.m */,
+				88AD36851E4458D600A0241E /* countryTableViewController.h */,
+				88AD36861E4458D600A0241E /* countryTableViewController.m */,
+				88AD36871E4458D600A0241E /* LoginConfiguration.h */,
+				88AD36881E4458D600A0241E /* LoginUImanager.h */,
+				88AD36891E4458D600A0241E /* LoginUImanager.m */,
+				88AD368A1E4458D600A0241E /* registerMobileViewController.h */,
+				88AD368B1E4458D600A0241E /* registerMobileViewController.m */,
+				88AD368C1E4458D600A0241E /* Strings.h */,
+				88AD368D1E4458D600A0241E /* Strings.m */,
+				88AD368E1E4458D600A0241E /* UIAlertsDialogue.h */,
+				88AD368F1E4458D600A0241E /* UIAlertsDialogue.m */,
+				88AD36901E4458D600A0241E /* UIColors.h */,
+				88AD36911E4458D600A0241E /* UIColors.m */,
+				88AD36921E4458D600A0241E /* UITextField+Extended.h */,
+				88AD36931E4458D600A0241E /* UITextField+Extended.m */,
+				88AD36941E4458D600A0241E /* verifyMobileViewController.h */,
+				88AD36951E4458D600A0241E /* verifyMobileViewController.m */,
+				88AD36961E4458D600A0241E /* WelcomeController.h */,
+				88AD36971E4458D600A0241E /* WelcomeController.m */,
+				3EA48ED91E38863600492966 /* MesiboUIHelper.h */,
+				3EA48EDA1E38863600492966 /* MesiboUIHelper.m */,
+			);
+			path = MesiboUIHelper;
+			sourceTree = "<group>";
+		};
+		3EA48EE91E38878A00492966 /* MesiboUIHelperResource */ = {
+			isa = PBXGroup;
+			children = (
+				3EA48EEE1E3887BA00492966 /* Main.storyboard */,
+				3EA48EEF1E3887BA00492966 /* WelcomeLaunch.storyboard */,
+				3EA48EF01E3887BA00492966 /* Assets.xcassets */,
+				3EA48EF31E3887BA00492966 /* tutorial_phone.png */,
+				3EA48EF41E3887BA00492966 /* fd.png */,
+				3EA48EF51E3887BA00492966 /* dj.png */,
+				8899636A1E93C9FD00FE21EB /* Info.plist */,
+			);
+			path = MesiboUIHelperResource;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3EA48ED51E38863500492966 /* MesiboUIHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3EA48EDF1E38863600492966 /* Build configuration list for PBXNativeTarget "MesiboUIHelper" */;
+			buildPhases = (
+				3EA48ED21E38863500492966 /* Sources */,
+				3EA48ED31E38863500492966 /* Frameworks */,
+				3EA48ED41E38863500492966 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3EA48F251E3888C000492966 /* PBXTargetDependency */,
+			);
+			name = MesiboUIHelper;
+			productName = MesiboUIHelper;
+			productReference = 3EA48ED61E38863500492966 /* libMesiboUIHelper.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		3EA48EE71E38878A00492966 /* MesiboUIHelperResource */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3EA48EEB1E38878A00492966 /* Build configuration list for PBXNativeTarget "MesiboUIHelperResource" */;
+			buildPhases = (
+				3EA48EE41E38878A00492966 /* Sources */,
+				3EA48EE51E38878A00492966 /* Frameworks */,
+				3EA48EE61E38878A00492966 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MesiboUIHelperResource;
+			productName = MesiboUIHelperResource;
+			productReference = 3EA48EE81E38878A00492966 /* MesiboUIHelperResource.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3EA48ECE1E38863400492966 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0800;
+				ORGANIZATIONNAME = "Sarfaraz Halai";
+				TargetAttributes = {
+					3EA48ED51E38863500492966 = {
+						CreatedOnToolsVersion = 8.0;
+						ProvisioningStyle = Automatic;
+					};
+					3EA48EE71E38878A00492966 = {
+						CreatedOnToolsVersion = 8.0;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 3EA48ED11E38863400492966 /* Build configuration list for PBXProject "MesiboUIHelper" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				English,
+				en,
+			);
+			mainGroup = 3EA48ECD1E38863400492966;
+			productRefGroup = 3EA48ED71E38863500492966 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3EA48ED51E38863500492966 /* MesiboUIHelper */,
+				3EA48EE71E38878A00492966 /* MesiboUIHelperResource */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3EA48EE61E38878A00492966 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3EA48EFB1E3887BA00492966 /* tutorial_phone.png in Resources */,
+				3EA48EF71E3887BA00492966 /* WelcomeLaunch.storyboard in Resources */,
+				3EA48EFC1E3887BA00492966 /* fd.png in Resources */,
+				3EA48EF81E3887BA00492966 /* Assets.xcassets in Resources */,
+				3EA48EF61E3887BA00492966 /* Main.storyboard in Resources */,
+				3EA48EFD1E3887BA00492966 /* dj.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3EA48ED21E38863500492966 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				88AD36991E4458D600A0241E /* countryTableViewController.m in Sources */,
+				88AD369A1E4458D600A0241E /* LoginUImanager.m in Sources */,
+				88AD369C1E4458D600A0241E /* Strings.m in Sources */,
+				88AD369F1E4458D600A0241E /* UITextField+Extended.m in Sources */,
+				88AD369D1E4458D600A0241E /* UIAlertsDialogue.m in Sources */,
+				88AD36A01E4458D600A0241E /* verifyMobileViewController.m in Sources */,
+				3EA48EDB1E38863600492966 /* MesiboUIHelper.m in Sources */,
+				88AD369E1E4458D600A0241E /* UIColors.m in Sources */,
+				88AD369B1E4458D600A0241E /* registerMobileViewController.m in Sources */,
+				8880D8181EA0B6BB004D5121 /* UIHelperImageUtils.m in Sources */,
+				88AD36981E4458D600A0241E /* basicViewController.m in Sources */,
+				88AD36A11E4458D600A0241E /* WelcomeController.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3EA48EE41E38878A00492966 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3EA48F251E3888C000492966 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3EA48EE71E38878A00492966 /* MesiboUIHelperResource */;
+			targetProxy = 3EA48F241E3888C000492966 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3EA48EDD1E38863600492966 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		3EA48EDE1E38863600492966 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		3EA48EE01E38863600492966 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		3EA48EE11E38863600492966 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		3EA48EEC1E38878A00492966 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = MesiboUIHelperResource/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mesibo.MesiboUIHelperResource;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		3EA48EED1E38878A00492966 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = MesiboUIHelperResource/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mesibo.MesiboUIHelperResource;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphonesimulator iphoneos";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3EA48ED11E38863400492966 /* Build configuration list for PBXProject "MesiboUIHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3EA48EDD1E38863600492966 /* Debug */,
+				3EA48EDE1E38863600492966 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3EA48EDF1E38863600492966 /* Build configuration list for PBXNativeTarget "MesiboUIHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3EA48EE01E38863600492966 /* Debug */,
+				3EA48EE11E38863600492966 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3EA48EEB1E38878A00492966 /* Build configuration list for PBXNativeTarget "MesiboUIHelperResource" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3EA48EEC1E38878A00492966 /* Debug */,
+				3EA48EED1E38878A00492966 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3EA48ECE1E38863400492966 /* Project object */;
+}

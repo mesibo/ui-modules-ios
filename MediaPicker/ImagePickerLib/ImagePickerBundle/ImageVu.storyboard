@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="11201" systemVersion="15G31" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" colorMatched="YES" initialViewController="G2e-cE-NsP">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="11161"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--Photo Viewer-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController storyboardIdentifier="PhotoSliderController" automaticallyAdjustsScrollViewInsets="NO" id="BYZ-38-t0r" customClass="PhotoSliderController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="y3c-jy-aDJ"/>
+                        <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="480"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <scrollView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" misplaced="YES" alwaysBounceVertical="YES" alwaysBounceHorizontal="YES" indicatorStyle="black" translatesAutoresizingMaskIntoConstraints="NO" id="vci-rO-n4P">
+                                <frame key="frameInset" width="320" height="480"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            </scrollView>
+                        </subviews>
+                        <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="vci-rO-n4P" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" constant="-20" id="F0M-BY-AjE"/>
+                            <constraint firstItem="vci-rO-n4P" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="topMargin" id="ekG-5A-Z2O"/>
+                            <constraint firstItem="vci-rO-n4P" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" constant="-64" id="jbx-Ia-tVU"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="vci-rO-n4P" secondAttribute="bottom" id="l5B-3g-zBg"/>
+                            <constraint firstAttribute="trailingMargin" secondItem="vci-rO-n4P" secondAttribute="trailing" constant="-20" id="xUO-UX-cdC"/>
+                        </constraints>
+                    </view>
+                    <navigationItem key="navigationItem" title="Photo Viewer" id="bbz-ts-fhT">
+                        <barButtonItem key="backBarButtonItem" title=" &lt;--" id="xXV-LG-p4C"/>
+                    </navigationItem>
+                    <connections>
+                        <outlet property="scrollVu" destination="vci-rO-n4P" id="EUU-7n-JeN"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="469" y="186"/>
+        </scene>
+        <!--Add Caption View Controller-->
+        <scene sceneID="V6z-s3-Xqx">
+            <objects>
+                <viewController storyboardIdentifier="AddCaptionViewController" automaticallyAdjustsScrollViewInsets="NO" id="PRJ-7q-8bd" customClass="AddCaptionViewController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="ZWj-sS-WJl"/>
+                        <viewControllerLayoutGuide type="bottom" id="iXp-sf-awb"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="29E-oZ-0bi">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="480"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" image="CroperBorder.png" translatesAutoresizingMaskIntoConstraints="NO" id="PFX-u5-N5w">
+                                <frame key="frameInset" width="414" height="480"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            </imageView>
+                            <view contentMode="scaleToFill" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="TUm-wK-Sg1">
+                                <frame key="frameInset" minY="415" width="320" height="65"/>
+                                <subviews>
+                                    <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" misplaced="YES" textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="LrJ-Kl-xLn">
+                                        <frame key="frameInset" minX="8" minY="13" width="255" height="40"/>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="35" id="Osv-K0-Vbc"/>
+                                        </constraints>
+                                        <color key="textColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                        <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
+                                    </textView>
+                                    <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="OUg-fQ-aYr">
+                                        <frame key="frameInset" minX="279" minY="21" width="24" height="24"/>
+                                        <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <constraints>
+                                            <constraint firstAttribute="width" constant="40" id="4I5-qN-8iL"/>
+                                            <constraint firstAttribute="height" constant="40" id="NUf-wV-HfM"/>
+                                        </constraints>
+                                        <state key="normal" image="ic_send_white" backgroundImage="ic_send"/>
+                                        <connections>
+                                            <action selector="sendMessagePicture:" destination="PRJ-7q-8bd" eventType="touchUpInside" id="abQ-8p-biV"/>
+                                        </connections>
+                                    </button>
+                                </subviews>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.59999999999999998" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="trailing" secondItem="OUg-fQ-aYr" secondAttribute="trailing" constant="9" id="BnV-Cb-BEz"/>
+                                    <constraint firstAttribute="bottom" secondItem="OUg-fQ-aYr" secondAttribute="bottom" constant="12" id="BoC-Cj-JsC"/>
+                                    <constraint firstItem="OUg-fQ-aYr" firstAttribute="leading" secondItem="LrJ-Kl-xLn" secondAttribute="trailing" constant="8" id="EMz-ru-Jr1"/>
+                                    <constraint firstAttribute="bottom" secondItem="LrJ-Kl-xLn" secondAttribute="bottom" constant="12" id="KcT-xw-ePl"/>
+                                    <constraint firstItem="LrJ-Kl-xLn" firstAttribute="top" secondItem="TUm-wK-Sg1" secondAttribute="top" constant="13" id="c2Q-iW-kxa"/>
+                                    <constraint firstItem="LrJ-Kl-xLn" firstAttribute="leading" secondItem="TUm-wK-Sg1" secondAttribute="leading" constant="8" id="dbI-Vv-PPm"/>
+                                    <constraint firstAttribute="height" constant="65" id="hgq-vy-vKr"/>
+                                    <constraint firstItem="OUg-fQ-aYr" firstAttribute="leading" secondItem="LrJ-Kl-xLn" secondAttribute="trailing" constant="8" id="kTe-zk-0GB"/>
+                                </constraints>
+                            </view>
+                        </subviews>
+                        <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstAttribute="trailingMargin" secondItem="PFX-u5-N5w" secondAttribute="trailing" constant="-20" id="3st-zJ-5mv"/>
+                            <constraint firstAttribute="trailingMargin" secondItem="TUm-wK-Sg1" secondAttribute="trailing" constant="-20" id="70A-Gp-FLC"/>
+                            <constraint firstItem="PFX-u5-N5w" firstAttribute="centerY" secondItem="29E-oZ-0bi" secondAttribute="centerY" id="9Lu-SB-2GK"/>
+                            <constraint firstItem="iXp-sf-awb" firstAttribute="top" secondItem="TUm-wK-Sg1" secondAttribute="bottom" id="CWV-Do-6Wh"/>
+                            <constraint firstItem="PFX-u5-N5w" firstAttribute="centerX" secondItem="29E-oZ-0bi" secondAttribute="centerX" id="N9X-S5-jQ3"/>
+                            <constraint firstItem="PFX-u5-N5w" firstAttribute="top" secondItem="ZWj-sS-WJl" secondAttribute="bottom" constant="-64" id="aBU-KC-CUq"/>
+                            <constraint firstItem="TUm-wK-Sg1" firstAttribute="leading" secondItem="29E-oZ-0bi" secondAttribute="leadingMargin" constant="-20" id="ax9-gL-uD4"/>
+                            <constraint firstItem="PFX-u5-N5w" firstAttribute="leading" secondItem="29E-oZ-0bi" secondAttribute="leadingMargin" constant="-20" id="dIa-EF-utm"/>
+                            <constraint firstItem="iXp-sf-awb" firstAttribute="top" secondItem="PFX-u5-N5w" secondAttribute="bottom" id="dlx-QG-ty2"/>
+                        </constraints>
+                    </view>
+                    <navigationItem key="navigationItem" id="94R-DM-x2B"/>
+                    <connections>
+                        <outlet property="mCaptionBtn" destination="OUg-fQ-aYr" id="o2S-35-qr7"/>
+                        <outlet property="mCaptionEdit" destination="LrJ-Kl-xLn" id="wNI-Xt-RYg"/>
+                        <outlet property="mCaptionEditHeight" destination="Osv-K0-Vbc" id="yRY-0o-XhW"/>
+                        <outlet property="mCaptionImageView" destination="PFX-u5-N5w" id="zII-c4-HqX"/>
+                        <outlet property="mCaptionView" destination="TUm-wK-Sg1" id="WyM-h9-hX1"/>
+                        <outlet property="mCaptionViewHeight" destination="hgq-vy-vKr" id="X4W-mJ-NmI"/>
+                        <outlet property="mCaptionViewShift" destination="CWV-Do-6Wh" id="p8b-h2-zTU"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="kFC-b9-ijV" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1445" y="233"/>
+        </scene>
+        <!--Navigation Controller-->
+        <scene sceneID="Ybm-TP-UVF">
+            <objects>
+                <navigationController automaticallyAdjustsScrollViewInsets="NO" id="G2e-cE-NsP" sceneMemberID="viewController">
+                    <toolbarItems/>
+                    <navigationItem key="navigationItem" id="ISi-rw-3Qh"/>
+                    <simulatedStatusBarMetrics key="simulatedStatusBarMetrics" statusBarStyle="lightContent"/>
+                    <navigationBar key="navigationBar" opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" id="urZ-eH-KJm">
+                        <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </navigationBar>
+                    <nil name="viewControllers"/>
+                    <toolbar key="toolbar" opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" id="Jbt-Pb-Hpv">
+                        <rect key="frame" x="0.0" y="436" width="320" height="44"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </toolbar>
+                    <connections>
+                        <segue destination="BYZ-38-t0r" kind="relationship" relationship="rootViewController" id="wMY-pv-J5x"/>
+                    </connections>
+                </navigationController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="hih-kb-jrT" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="53" y="186"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="CroperBorder.png" width="47" height="47"/>
+        <image name="ic_send" width="24" height="24"/>
+        <image name="ic_send_white" width="24" height="24"/>
+    </resources>
+    <simulatedMetricsContainer key="defaultSimulatedMetrics">
+        <simulatedStatusBarMetrics key="statusBar"/>
+        <simulatedOrientationMetrics key="orientation"/>
+        <simulatedScreenMetrics key="destination"/>
+    </simulatedMetricsContainer>
+</document>
