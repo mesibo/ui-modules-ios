@@ -300,14 +300,13 @@
 
 -(void) Mesibo_OnMessageStatus:(MesiboParams *)params {
     
+    if(params.groupid > 0 && [params isMessageStatusInProgress]) return;
+    
     // a quick validating if message exists
     MesiboMessageView *data = [mMap objectForKey:@(params.mid)];
     if(nil == data) return;
     
     if(MESIBO_MSGSTATUS_READ == params.status) {
-        if(params.groupid > 0)
-            return;
-        
         [self setReadStatus];
         return;
     }

@@ -44,9 +44,10 @@
 #import "MesiboImage.h"
 #import "MesiboConfiguration.h"
 #import "Mesibo/Mesibo.h"
+#import "MesiboUI.h"
 
 @interface UserData() {
-    MesiboUserProfile *mUser;
+    MesiboProfile *mUser;
     UIImage *mThumbnail;
     UIImage *mImage;
     NSString *mLastMessage;
@@ -60,8 +61,7 @@
     BOOL mFixedImage;
     NSIndexPath * mUserListPosition;
     uint64_t mTypingTs;
-    MesiboUserProfile *mTypingProfile;
-    NSTimer *mUserListTimer;
+    MesiboProfile *mTypingProfile;
 }
 
 @end
@@ -80,7 +80,6 @@
     if (self == nil)
         return nil;
     
-    mUserListTimer = nil;
     mUser = nil;
     mThumbnail = nil;
     mImage = nil;
@@ -108,11 +107,11 @@
 }
 
 -(NSString *) getPeer {
-    return mUser.address;
+    return [mUser getAddress];
 }
 
 -(uint32_t) getGroupId {
-    return mUser.groupid;
+    return [mUser getGroupId];
 }
 
 -(uint64_t) getMid {
@@ -123,15 +122,10 @@
     mId = msgid;
 }
 
--(void) setUser:(MesiboUserProfile *) profile {
+-(void) setUser:(MesiboProfile *) profile {
     mUser = profile;
     if(mFixedImage)
         return;
-    
-    if(!mUser.picturePath || !mCatchedPicturePath || [mUser.picturePath isEqualToString:mCatchedPicturePath]) {
-        mImage = nil;
-        mThumbnail = nil;
-    }
 }
 
 -(void) setFixedImage:(BOOL) fixed {
@@ -177,11 +171,11 @@
 }
 
 -(NSString *) getName {
-    return mUser.name;
+    return [mUser getNameOrAddress:@"+"];
 }
 
 -(NSString *) getUserStatus {
-    return mUser.status;
+    return [mUser getStatus];
 }
 
 -(BOOL)isDeleted {
@@ -193,7 +187,7 @@
 }
 
 -(NSString *) getImagePath {
-    return [MesiboInstance getProfilePicture:mUser type:MESIBO_FILETYPE_AUTO];
+    return [mUser getImageOrThumbnailPath];
 }
 
 -(void) setThumbnail:(UIImage *) thumbnail {
@@ -205,36 +199,25 @@
 }
 
 -(UIImage *) getImage {
-    NSString *path = [self getImagePath];
-    if(!path || !mCatchedPicturePath || [mUser.picturePath isEqualToString:mCatchedPicturePath]) {
-        mThumbnail = nil;
-        mImage = nil;
-    }
+    if(mUser) return [mUser getImageOrThumbnail];
     
     if(mImage) return mImage;
     
-    if(!mUser) return nil;
+    return nil;
     
-    mCatchedPicturePath = path;
-    if(!mCatchedPicturePath) return nil;
     
-    mImage = [MesiboInstance loadImage:nil filePath:path maxside:0];
-    mThumbnail = [MesiboInstance loadImage:mImage filePath:path maxside:60];
-    
-    return mImage;
 }
 
 -(UIImage *) getThumbnail {
-    NSString *path = [self getImagePath];
-    if(!path || !mCatchedPicturePath || ![mUser.picturePath isEqualToString:mCatchedPicturePath]) {
-        mThumbnail = nil;
-        mImage = nil;
+    if(mUser) {
+        UIImage *tn = [mUser getThumbnail];
+        //if(tn) mThumbnail = tn;
+        return tn;
     }
     
     if(mThumbnail) return mThumbnail;
     
-    [self getImage];
-    return mThumbnail;
+    return nil;
 }
 
 -(UIImage *) getDefaultImage:(BOOL)useTitler {
@@ -255,24 +238,16 @@
     mTypingTs = 0;
 }
 
--(void) setTyping:(MesiboUserProfile *) profile {
-    mTypingTs = [MesiboInstance getTimestamp];
+-(void) setTyping:(MesiboProfile *) profile {
     mTypingProfile = profile;
 }
 
--(uint64_t) getTypingTimeout {
-    if(0 == mTypingTs)
-        return 0;
-    
-    uint64_t elapsed = [MesiboInstance getTimestamp] - mTypingTs;
-    uint64_t timeout = [MesiboInstance getUiOptions].mTypingIndicationTimeMs;
-    if(elapsed >= timeout)
-        return 0;
-    
-    return timeout-elapsed;
+-(BOOL) isTyping {
+    if(mTypingProfile) return [mTypingProfile isTypingInGroup:[mUser getGroupId]];
+    return [mUser isTypingInGroup:[mUser getGroupId]];
 }
 
--(MesiboUserProfile *) getTypingProfile {
+-(MesiboProfile *) getTypingProfile {
     return mTypingProfile;
 }
 
@@ -284,14 +259,6 @@
     return mUserListPosition;
 }
 
--(NSTimer *) getUserListStatusTimer {
-    return mUserListTimer;
-}
-
--(void) setUserListStatusTimer:(NSTimer *)timer {
-    mUserListTimer = timer;
-}
-
 +(UserData *) getUserDataFromParams:(MesiboParams *) params {
     if(!params || !params.profile)
         return nil;
@@ -299,13 +266,13 @@
     return [UserData getUserDataFromProfile:params.profile];
 }
 
-+(UserData *) getUserDataFromProfile:(MesiboUserProfile *) profile {
++(UserData *) getUserDataFromProfile:(MesiboProfile *) profile {
     if(!profile) return nil;
     
-    UserData *d = (UserData *) profile.other;
+    UserData *d = (UserData *) [profile getUserData];
     if(!d) {
         d = [UserData initialize:profile];
-        profile.other = d;
+        [profile setUserData:d];
     }
     return d;
 }

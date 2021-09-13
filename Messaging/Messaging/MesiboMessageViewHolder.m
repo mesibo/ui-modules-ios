@@ -87,6 +87,7 @@
     UILabel *_timeLabel;
     UILabel *_senderName;
     UIView *_replyView;
+    UIView *_bubbleView;
     UIImageView *_bubbleChatImage;
     UIImageView *_statusIcon;
     UIImageView *_favoriteIcon;
@@ -143,6 +144,7 @@
         _chatPicture = [[UIImageView alloc] init];
         
         _bubbleChatImage = [[UIImageView alloc] init];
+        _bubbleView = [[UIView alloc] init];
         _timeLabel = [[UILabel alloc] init];
         _statusIcon = [[UIImageView alloc] init];
         _senderName =[[UILabel alloc] init];
@@ -152,14 +154,14 @@
         _audioVideoPlayLayer = [[UIImageView alloc] init];
         
         _mDownloadProgressView = [[ThumbnailProgressView alloc] init];
-        uint32_t toolbarColor = [MesiboInstance getUiOptions].mToolbarColor;
+        uint32_t toolbarColor = [MesiboUI getUiOptions].mToolbarColor;
         UIColor *color = nil;
         if(toolbarColor)
             color = [UIColor getColor:toolbarColor];
         
         [_mDownloadProgressView config:nil progressColor:nil tickColor:color lineWidth:0 arrowUp:NO];
         
-        [self.contentView addSubview:_bubbleChatImage];
+        [self.contentView addSubview:_bubbleView];
         [self.contentView addSubview:_senderName];
         [self.contentView addSubview:_messageLabel];
         [self.contentView addSubview:_chatPicture];
@@ -178,9 +180,9 @@
         
         UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self
                                                                                     action:@selector(singleTapGestureCaptured)];
-        [_bubbleChatImage addGestureRecognizer:singleTap];
-        [_bubbleChatImage setMultipleTouchEnabled:YES];
-        [_bubbleChatImage setUserInteractionEnabled:YES];
+        [_bubbleView addGestureRecognizer:singleTap];
+        [_bubbleView setMultipleTouchEnabled:YES];
+        [_bubbleView setUserInteractionEnabled:YES];
         
     }
     
@@ -275,6 +277,7 @@
     _chatPicture.frame = CGRectMake(0, 0, 0, 0);
     _statusIcon.frame = CGRectMake(0, 0, 0, 0);
     _bubbleChatImage.frame = CGRectMake(0, 0, 0, 0);
+    _bubbleView.frame = CGRectMake(0, 0, 0, 0);
     _messageLabel.frame =CGRectMake(0, 0, 0, 0);
     _timeLabel.frame =CGRectMake(0, 0, 0, 0);
     _senderName.frame =CGRectMake(0, 0, 0, 0);
@@ -330,10 +333,8 @@
     _messageLabel.frame = CGRectMake(0, 0, max_witdh, MAXFLOAT);
     
     _messageLabel.font = [UIFont systemFontOfSize:MESSAGE_FONT_SIZE_CUSTOM];
-    //_messageLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
     _messageLabel.backgroundColor = [UIColor getColor:[_uiData getCustomColor]];
     _messageLabel.userInteractionEnabled = NO;
-//    _messageLabel.scrollEnabled = NO;
     _messageLabel.editable = NO;
     _messageLabel.textColor=[UIColor getColor:MESSAGE_FONT_COLOR_NORMAL];
     
@@ -349,7 +350,6 @@
     CGFloat textView_x = (_screenWidth - textView_w)/2;
     CGFloat textView_y = pos_y;
     
-    //_messageLabel.layer.cornerRadius = textView_h/2;
     _messageLabel.layer.cornerRadius = 5;
     _messageLabel.layer.masksToBounds = true;
     
@@ -366,13 +366,9 @@
     _messageLabel.frame = CGRectMake(0, 0, max_witdh, MAXFLOAT);
     
     _messageLabel.textAlignment = NSTextAlignmentCenter;
-    //_messageLabel.font = [UIFont fontWithName:MESSAGE_DATE_FONT_NAME size:MESSAGE_DATE_FONT_SIZE+5];
-    //[_messageLabel sizeToFit];
     _messageLabel.font = [UIFont fontWithName:MESSAGE_DATE_FONT_NAME size:MESSAGE_DATE_FONT_SIZE];
     _messageLabel.textColor = [UIColor getColor:MESSAGE_DATE_FONT_COLOR];
     _messageLabel.backgroundColor = [UIColor getColor:SYSTEM_MESSAGES_BACKGROUND_COLOR];
-    //_messageLabel.layer.cornerRadius = MESSAGE_DATE_LABEL_CORNER_RADIUS;
-    //_messageLabel.layer.masksToBounds = YES;
     _messageLabel.autoresizingMask = UIViewAutoresizingNone;
     
     _messageLabel.editable = NO;
@@ -385,7 +381,6 @@
     CGFloat textView_x = (_screenWidth - textView_w)/2;
     CGFloat textView_y = pos_y;
     
-    //_messageLabel.layer.cornerRadius = textView_h/2;
     _messageLabel.layer.cornerRadius = 5;
     _messageLabel.layer.masksToBounds = true;
     
@@ -509,8 +504,6 @@
     
     _chatPicture.image = [_uiData getThumbnail];
     
-    //UIView *downloadVu = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 100, 100)];
-    
     if([_message hasMedia] && (_message.media.location || [_message.media.file isTransferred])) {
         _mDownloadProgressView.hidden = YES;
     } else {
@@ -524,13 +517,6 @@
     
     [self setPlayerView];
     
-    /*
-     UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self
-     action:@selector(singleTapGestureCaptured)];
-     [_chatPicture addGestureRecognizer:singleTap];
-     [_chatPicture setMultipleTouchEnabled:YES];
-     [_chatPicture setUserInteractionEnabled:YES];
-     */
     pos_y +=_chatPicture.frame.size.height+3;
     
     
@@ -633,10 +619,6 @@
         return;
     }
     
-    // Don't do this, this seems to be disable further actions
-    //[_chatPicture setMultipleTouchEnabled:YES];
-    //[_chatPicture setUserInteractionEnabled:YES];
-    
     
     if(![_message hasMedia])
         return;
@@ -715,7 +697,6 @@
     if(!isDownloading) {
         isDownloading = YES;
         [_mDownloadProgressView startSpinProgressBackgroundLayer];
-        //[_mDownloadProgressView setCircularState:FFCircularStateIcon];
     }
     
     [_mDownloadProgressView stopSpinProgressBackgroundLayer];
@@ -742,7 +723,6 @@
             return;
         }
         
-        //momemntary display upload successful
         [_mDownloadProgressView  setCircularState:  FFCircularStateCompleted];
         double delayInSeconds = 2.0;
         dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
@@ -766,7 +746,6 @@
     int progress = [file getProgress];
     
     if([file isTransferred]) {
-        //UIImage *image = file.image;
         if(file.image)
             _chatPicture.image = file.image;
         [self stopProgressBar];
@@ -781,7 +760,6 @@
     }
     
     if(MESIBO_FILEMODE_UPLOAD == file.mode) {
-        //TBD, we need to use default for DOWNLOAD as we donot have message status
         [self updateStatusIcon:MESIBO_MSGSTATUS_FAIL];
     }
     
@@ -820,7 +798,6 @@
     _messageLabel.scrollEnabled = NO;
     _messageLabel.editable = NO;
     
-    //_mainLabel.backgroundColor = [UIColor whiteColor];
     _messageLabel.textContainerInset = UIEdgeInsetsMake(
                                                         -0,
                                                         -_messageLabel.textContainer.lineFragmentPadding,
@@ -989,6 +966,7 @@
     NSString *msg = [_uiData getMessage];
     
     bubble_height = MAX ((CGRectGetMaxY(_timeLabel.frame)+5) ,(  CGRectGetMaxY(_chatPicture.frame)+7));
+    MesiboUiOptions *uio = [MesiboUI getUiOptions];
     
     if (![_message isIncoming]) {
         bubble_x = _timeLabel.frame.origin.x - 3;
@@ -1006,11 +984,15 @@
         bubble_width = self.contentView.frame.size.width - bubble_x - marginRight;
         bubble_x -= RIGHT_OUT_MARGIN;
         
+        _bubbleView.backgroundColor = [UIColor getColor:uio.messageBackgroundColorForMe];
+        
     } else {
         bubble_x = marginLeftOuter;
         _bubbleChatImage.image = [MesiboImage bubbleImage:NO];
         bubble_width = MAX( CGRectGetMaxX(_timeLabel.frame)+marginRight,
                            _chatPicture.frame.origin.x + _chatPicture.frame.size.width + marginRight);
+        
+        _bubbleView.backgroundColor = [UIColor getColor:uio.messageBackgroundColorForPeer];
         
     }
     
@@ -1024,6 +1006,20 @@
     bubble_height +=BUBBLE_BOTTOM_MARGIN;
     _bubbleChatImage.frame = CGRectMake(bubble_x, bubble_y, bubble_width, bubble_height);
     _bubbleChatImage.autoresizingMask = globlResizing;
+    
+    //TBD, adjust as per the width and height of the cell
+    _bubbleView.layer.cornerRadius = 8;
+    _bubbleView.layer.shadowColor = [[UIColor grayColor] CGColor];
+    _bubbleView.layer.shadowOffset = CGSizeMake(0, 0);
+    _bubbleView.layer.shadowRadius = 4.0;
+    _bubbleView.layer.shadowOpacity = 0.5;
+    
+    _bubbleView.frame = CGRectMake(bubble_x, bubble_y, bubble_width, bubble_height);
+    // Note, we are giving margin by incresing width by BUBBLE_BOTTOM_MARGIN in height()
+    // callback
+    //_bubbleView.bounds = CGRectInset(_bubbleView.frame, 10.0f, 10.0f);
+    _bubbleView.autoresizingMask = globlResizing;
+    
 }
 
 
@@ -1035,7 +1031,7 @@
         return _messageLabel.frame.size.height + 12;
     }
     
-    return _bubbleChatImage.frame.size.height;
+    return _bubbleView.frame.size.height + BUBBLE_BOTTOM_MARGIN;
 }
 
 #pragma mark - StatusIcon
@@ -1129,7 +1125,7 @@
 }
 
 - (void)copy:(id)sender {
-    MessageViewController *cv = (MessageViewController *) [self getParent];
+    MesiboTableController *cv = [self getTableController];
     [cv copy:self];
     UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
     if(_message.media)

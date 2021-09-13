@@ -49,9 +49,9 @@
 
 + (void) launchUserListViewcontroller:(UIViewController *) parent withChildViewController : (UserListViewController*) childViewController withContactChooser:(int) selection withForwardMessageData:(NSArray *) fwdMessage  withMembersList: (NSString* )memberList withForwardGroupName:(NSString*) forwardGroupName withForwardGroupid:(long) forwardGroupid;
 
-+(void) launchMessageViewController:(UIViewController *) parent withUserData : (MesiboUserProfile*) userProfile uidelegate:(id)uidelegate;
++(void) launchMessageViewController:(UIViewController *) parent withUserData : (MesiboProfile*) userProfile uidelegate:(id)uidelegate;
 
-+ (void) launchCreatNewGroupController:(UIViewController *)parent withMemeberProfiles:(NSMutableArray*) profileArray withGroupId:(uint32_t) groupid modifygroup:(BOOL)modifygroup uidelegate:(id)uidelegate;
++ (void) launchCreatNewGroupController:(UIViewController *)parent withMemeberProfiles:(NSMutableArray*)profileArray existingMembers:(NSMutableArray *)members withGroupId:(uint32_t) groupid  modifygroup:(BOOL)modifygroup  uidelegate:(id)uidelegate;
 
 +(void) showMediaFilesInViewer:(UIViewController *) parent withInitialIndex:(int) index withData:(NSArray*) data withTitle:(NSString *)title;
 

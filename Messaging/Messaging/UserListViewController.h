@@ -62,12 +62,11 @@
 @property (assign, nonatomic) BOOL mGroupBackEdit;
 
 //@property (strong, nonatomic) NSString* mMemberList;
-@property (strong, nonatomic) NSArray* mGroupMembers;
-@property (strong, nonatomic) MesiboUserProfile* mGroupProfile ;
 @property (assign, nonatomic) uint32_t mForwardGroupid ;
 @property (weak, nonatomic) id mUiDelegate ;
 
 
 -(void) barButtonBackPressed:(id)sender;
+-(void) setGroupMembers:(NSMutableArray *)members;
 
 @end

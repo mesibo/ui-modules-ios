@@ -182,7 +182,7 @@
 
 -(BOOL) hasImage {
     if([_mMessage isDeleted])
-        return nil;
+        return NO;
     
     return [_mMessage hasMedia];
 }

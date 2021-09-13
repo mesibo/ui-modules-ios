@@ -51,14 +51,14 @@
 //@property (assign,nonatomic) NSInteger messageStatus;
 //@property (assign,nonatomic) u_int64_t mID;
 
-+(UserData *) initialize:(MesiboUserProfile *) profile;
++(UserData *) initialize:(MesiboProfile *) profile;
 
 -(void) setMessage:(uint64_t)messageid time:(NSString*)msgtime status:(int)status deleted:(BOOL)deleted msg:(NSString*)msg;
 -(NSString *) getPeer;
 -(uint32_t) getGroupId;
 -(uint64_t) getMid;
 -(void) setMid:(uint64_t) msgid;
--(void) setUser:(MesiboUserProfile *) profile;
+-(void) setUser:(MesiboProfile *) profile;
         
 -(void) setFixedImage:(BOOL) fixed;
 -(int) getUnreadCount;
@@ -83,18 +83,16 @@
 -(UIImage *) getDefaultImage:(BOOL)useTitler ;
 
 -(void) clearTyping;
--(void) setTyping:(MesiboUserProfile *) profile;
+-(void) setTyping:(MesiboProfile *) profile;
+-(BOOL) isTyping;
 -(uint64_t) getTypingTimeout;
--(MesiboUserProfile *) getTypingProfile;
+-(MesiboProfile *) getTypingProfile;
 -(void) setUserListPosition:(NSIndexPath *)indexPath;
 -(NSIndexPath *) getUserListPosition;
 
--(NSTimer *) getUserListStatusTimer;
--(void) setUserListStatusTimer:(NSTimer *) timer;
-
 +(UserData *) getUserDataFromParams:(MesiboParams *) params;
 
-+(UserData *) getUserDataFromProfile:(MesiboUserProfile *) profile;
++(UserData *) getUserDataFromProfile:(MesiboProfile *) profile;
 
 
 @end

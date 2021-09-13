@@ -421,7 +421,7 @@
     // Change 10.0 to adjust the distance from bottom
     if (maximumOffset - currentOffset <= 100.0) {
         //MesiboTableControllerDelegate *l = (MesiboTableControllerDelegate *)mListener;
-        if(![mListener loadMoreMessages]) {
+        if(![mListener loadMessages]) {
         }
     }
 }

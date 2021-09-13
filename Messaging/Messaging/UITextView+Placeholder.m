@@ -53,17 +53,23 @@
 #pragma mark - Class Methods
 #pragma mark `defaultPlaceholderColor`
 
-+ (UIColor *)defaultPlaceholderColor {
+
++(UIColor *)defaultPlaceholderColor {
+
     static UIColor *color = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         UITextField *textField = [[UITextField alloc] init];
         textField.placeholder = @" ";
-        color = [textField valueForKeyPath:@"_placeholderLabel.textColor"];
+        //        color = [textField valueForKeyPath:@"_placeholderLabel.textColor"];
+        Ivar ivar =  class_getInstanceVariable([UITextField class], "_placeholderLabel");
+        UILabel *placeholderLabel = object_getIvar(textField, ivar);
+        color =  placeholderLabel.textColor;
+
     });
     return color;
-}
 
+}
 
 #pragma mark - `observingKeys`
 

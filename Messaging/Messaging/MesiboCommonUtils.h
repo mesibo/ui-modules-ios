@@ -48,7 +48,7 @@
 
 @interface MesiboCommonUtils : NSObject
 
-+(NSString *) getUserName:(MesiboUserProfile *) profile;
++(NSString *) getUserName:(MesiboProfile *) profile;
 
 + (UIImage*) getBitmapFromFile:(NSString*) checkFile;
 + (BOOL) isImageFile:(NSString*) filePath ;

@@ -45,6 +45,23 @@
 
 @implementation MesiboUI
 
+MesiboUiOptions *mUiOptions = nil;
++(void) setUiOptions:(MesiboUiOptions *)options {
+    if(options)
+        mUiOptions = options;
+}
+
++(MesiboUiOptions *) getUiOptions {
+    if(!mUiOptions) {
+        mUiOptions = [[MesiboUiOptions alloc] init];
+        //NSLog(@"Ui Options: %d", (int)mUiOptions.mTypingIndicationTimeMs);
+        //NSLog(@"Size of %@: %zd", NSStringFromClass([mUiOptions class]), malloc_size((__bridge const void *) mUiOptions));
+        
+    }
+    return mUiOptions;
+}
+
+
 + (UIViewController *) getMesiboUIViewController:(id)uidelegate {
     NSBundle *mainBundle = [NSBundle mainBundle];
     NSURL *bundleURL = [mainBundle URLForResource:MESIBO_UI_BUNDLE withExtension:@"bundle"];

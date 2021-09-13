@@ -61,6 +61,7 @@
 @property (strong, nonatomic) IBOutlet UIButton *mChatBtn;
 
 @property (weak, nonatomic) IBOutlet UITableViewWithReloadCallback *mChatTable;
+@property (weak, nonatomic) IBOutlet UIButton *mAttachButton;
 
 
 @property (strong, nonatomic) IBOutlet UIView *mChatView;
@@ -76,7 +77,7 @@
 
 //@property (strong,nonatomic) NSString *mProfileFilePath;
 
-@property (strong, nonatomic) MesiboUserProfile* mUser;
+@property (strong, nonatomic) MesiboProfile* mUser;
 
 //- (void) ImagePickerCallback:(NSString *) imagePath;
 //- (void) resend:(id) sender;
@@ -104,6 +105,6 @@
 @property (weak, nonatomic) IBOutlet UIButton *mReplyViewCancelBtn;
 
 -(void) setTableViewDelegate:(id) tableDelegate;
-
+-(MesiboTableController *) getTableController;
 @end
 

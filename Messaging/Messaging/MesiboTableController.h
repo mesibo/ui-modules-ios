@@ -52,7 +52,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 @required
 - (void) share:(NSString *) text image:(UIImage *)image;
-- (BOOL) loadMoreMessages;
+- (BOOL) loadMessages;
 - (void) enableSelectionActionButtons:(BOOL)enable buttons:(nullable NSArray *) buttons;
 - (void) forwardMessages:(NSArray *) msgids;
 - (void) reply:(id)data;
@@ -91,6 +91,7 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) resend:(id)sender;
 -(void) reply:(id)sender;
 -(void) share:(id)sender;
+-(void)copy :(id) sender;
 
 -(void)insertInTable:(NSInteger)row section:(NSInteger)section showLatest:(BOOL)showLatest animate:(BOOL)animate;
 

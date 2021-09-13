@@ -143,14 +143,14 @@
     return imagePath;
 }
 
-+(NSString *) getUserName:(MesiboUserProfile *) profile {
-    if(![MesiboCommonUtils isEmpty:profile.name])
-        return profile.name;
++(NSString *) getUserName:(MesiboProfile *) profile {
+    if(![MesiboCommonUtils isEmpty:[profile getName]])
+        return [profile getName];
     
-    if(![MesiboCommonUtils isEmpty:profile.address])
-        return profile.address;
+    if(![MesiboCommonUtils isEmpty:[profile getAddress]])
+        return [profile getAddress];
     
-    return [NSString stringWithFormat:@"Group %u", profile.groupid];
+    return [NSString stringWithFormat:@"Group %u", [profile getGroupId]];
 }
 
 +(BOOL) equals:(NSString *)s old:(NSString *)old {

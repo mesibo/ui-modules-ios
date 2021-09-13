@@ -87,14 +87,12 @@
     CGRect mChatBoxframe, mChatBoxExtendedFrame;
     MesiboParams *mMesiboParam;
     NSBundle *ChatBundle;
+    BOOL showAttachments;
     BOOL closeMediaPane;
     BOOL mDeletedGroup;
   
     CGRect contextMenuFrame;
     CGRect chatEditFrame;
-    NSTimer* statusTimer;
-    uint64_t mPrevActivityTime;
-    int mPrevActivity;
     UIView *mReplyTextView;
     UIImage *mReplyImageThumb;
     NSString *mReplyUsernameStorage;
@@ -127,20 +125,16 @@
     
     mSendEnabled = YES;
     mModel = nil;
-    mMesiboUIOptions = [MesiboInstance getUiOptions];
+    mMesiboUIOptions = [MesiboUI getUiOptions];
     mPrimaryColor = [UIColor getColor:0xff00868b];
     if(mMesiboUIOptions.mToolbarColor)
         mPrimaryColor = [UIColor getColor:mMesiboUIOptions.mToolbarColor];
     
     mDeletedGroup = NO;
-    if(_mUser.flag&MESIBO_USERFLAG_DELETED)
-        mDeletedGroup = YES;
     
     // Do any additional setup after loading the view.
 
     closeMediaPane = false;
-    mPrevActivityTime = 0;
-    mPrevActivity = -1;
     mReplyUsernameStorage = nil;
     
     mMesiboParam = (MesiboParams *) [[MesiboParams alloc] init];
@@ -151,7 +145,7 @@
         
     }
     
-    mMesiboUIOPtions = [MesiboInstance getUiOptions];
+    mMesiboUIOPtions = [MesiboUI getUiOptions];
     
     ChatBundle = [[NSBundle alloc] initWithURL:bundleURL];
     
@@ -228,8 +222,7 @@
     
     //self.navigationItem.rightBarButtonItems = mForwardButtons;
     
-    
-    [MesiboInstance startProfilePictureTransfer:_mUser listener:self];
+    [_mUser getImage]; // needed?? earlier we were doing startProfilePictureTransfer
     
     NSString *username = [MesiboCommonUtils getUserName:_mUser];
     self.title = username;
@@ -343,11 +336,15 @@
     //_mChatEdit.textColor = [UIColor lightGrayColor]; //optional
     
     //UITextView has no placeholder like UITextField so we are using category class
+#ifdef USE_PLACEHOLDER
     _mChatEdit.placeholder = CHATBOX_PLACE_HOLDER_TEXT;
     _mChatEdit.placeholderColor = [UIColor lightGrayColor]; //optional
+#endif
     _mChatEdit.text = @""; // so that placeholder visible
-    
+
+#if 0
     _mUser.unread = 0;
+#endif
     
     _mReplyView.layer.cornerRadius = REPLY_VIEW_CORNER_RADIUS;
     _mReplyView.layer.masksToBounds = YES;
@@ -355,10 +352,17 @@
     
     if(mDeletedGroup) {
         _mChatView.hidden = YES;
-        //_mCameraBtn.hidden = YES;
-        //_mPaneBtn.hidden = YES;
     }
     
+    showAttachments = [MesiboInstance isFileTransferEnabled];
+    
+    if(!showAttachments) {
+        _mAttachButton.hidden = YES;
+        _mPaneBtn.hidden = YES;
+        _mCameraBtn.hidden = YES;
+        _mChatEdit.translatesAutoresizingMaskIntoConstraints = YES;
+        _mChatEdit.frame = _mChatEdit.frame = CGRectMake(10, _mChatEdit.frame.origin.y, _mChatEdit.frame.size.width + _mPaneBtn.frame.size.width, _mChatEdit.frame.size.height);
+    }
     
     [self onLogin:nil];
     [self updateUserActivity:nil activity:MESIBO_ACTIVITY_NONE];
@@ -367,7 +371,11 @@
 -(void) setTableViewDelegate:(id) tableDelegate {
     mTableDelegate = tableDelegate;
 }
-//MesiboTableController delegates
+
+-(MesiboTableController *) getTableController {
+    return mTableController;
+}
+
 - (void) share:(NSString *) text image:(UIImage *)image {
     
 }
@@ -388,46 +396,14 @@
 }
 
 
--(BOOL) canSendActivity {
-    if([self isOnline])
-        return YES;
-    
-    int lastStatus = [mModel lastStatus];
-    
-    if(MESIBO_MSGSTATUS_READ == lastStatus || MESIBO_MSGSTATUS_DELIVERED == lastStatus) {
-        return YES;
-    }
-    
-    if(MESIBO_MSGSTATUS_RECEIVEDNEW == lastStatus) {
-        return YES;
-    }
-    
-    return NO;
-}
 
 - (void)sendPresence :(int) presence {
     if(!mSendEnabled)
         return;
     
     uint32_t msgid = 0;
-    
-    if(MESIBO_ACTIVITY_ONLINE == presence)
-        msgid = [MesiboInstance random];
-    else if(![self canSendActivity]) {
-        return;
-    }
-    
-    uint64_t currTS = [MesiboInstance getTimestamp];
-    
-    if(mPrevActivity == presence && (currTS - mPrevActivityTime) <= STATUS_CAST ) {
-        return;
-    }
-    
-    [MesiboInstance sendActivity:mMesiboParam msgid:msgid activity:presence interval:0];
-    
-    mPrevActivityTime = currTS;
-    mPrevActivity = presence;
-    
+
+    [MesiboInstance sendActivity:mMesiboParam msgid:msgid activity:presence interval:10000];
 }
 
 
@@ -450,7 +426,7 @@
 
 - (void) openProfileImage:(UITapGestureRecognizer *)sender{
     
-    NSString *picturePath = [MesiboInstance getProfilePicture:_mUser type:MESIBO_FILETYPE_AUTO];
+    NSString *picturePath = [_mUser getImageOrThumbnailPath];
     
     if(picturePath) {
         UIImage *image = [UIImage imageWithContentsOfFile:picturePath];
@@ -465,10 +441,10 @@
 
 - (IBAction)onLogin:(id)sender {
     
-    if(_mUser.groupid)
-        [mMesiboParam setGroup:_mUser.groupid];
+    if([_mUser getGroupId])
+        [mMesiboParam setGroup:[_mUser getGroupId]];
     else
-        [mMesiboParam setPeer:_mUser.address];
+        [mMesiboParam setPeer:[_mUser getAddress]];
 
     [mModel reset];
     [mModel setDelegate:self];
@@ -479,35 +455,20 @@
     [mModel start];
     [self loadMessages];
     
-    [self sendPresence:MESIBO_ACTIVITY_ONLINE];
+    if(![_mUser getGroupId])
+        [self sendPresence:MESIBO_ACTIVITY_JOINED];
 }
 
 -(void) setProfilePicture {
-    UIImage *image = [mUserData getImage];
+    UIImage *image = [mUserData getThumbnail];
     if(!image) {
         image = [mUserData getDefaultImage:mMesiboUIOptions.useLetterTitleImage];
     }
     
     image = [MesiboInstance loadImage:image filePath:nil maxside:PROFILE_THUMBNAIL_IMAGE_NAVBAR];
-    //[[mProfileThumbnail imageView] setContentMode:UIViewContentModeScaleAspectFit];
-    //mProfileThumbnail.contentHorizontalAlignment = UIControlContentHorizontalAlignmentFill;
-    //mProfileThumbnail.contentVerticalAlignment = UIControlContentVerticalAlignmentFill;
     [mProfileThumbnail setImage:image forState:UIControlStateNormal];
 }
 
-
--(BOOL) isOnline {
-    if(!_mUser)
-        return NO;
-    
-    if(_mUser.groupid)
-        return YES;
-    
-    uint64_t lastOnline = [MesiboInstance getTimestamp] - _mUser.lastActiveTime; //in ms
-    //NSLog(@"User lastonline: %@ %@", @(lastOnline), @(_mUser.lastActiveTime));
-    
-    return (lastOnline <= ONLINE_TIME);
-}
 
 
 -(void) updateUserStatusBlank {
@@ -528,17 +489,14 @@
 }
 
 -(int) updateUserStatus :(NSString *)status duration:(long)duration {
-    if(nil != statusTimer) {
-        [statusTimer invalidate];
-        statusTimer = nil;
-    }
+    
     
     if(!status) {
         //TBD, add groupstatus
-        if(!_mUser.groupid || !_mUser.status)
+        if(![_mUser getGroupId] || ![_mUser getStatus])
             [self updateUserStatusBlank];
         else
-            [self updateUserStatus:_mUser.status duration:0];
+            [self updateUserStatus:[_mUser getStatus] duration:0];
         return 0;
         
     }
@@ -557,10 +515,6 @@
                      }];
     
     
-    if(duration > 0)
-        statusTimer = [NSTimer scheduledTimerWithTimeInterval:(duration/1000) target: self
-                                                     selector: @selector(updateUserStatusBlank) userInfo: nil repeats: NO];
-    
     return 0;
     
 }
@@ -574,6 +528,9 @@
     if(MESIBO_STATUS_NONETWORK == connectionStatus) {
         return [self updateUserStatus:mMesiboUIOPtions.noNetworkIndicationTitle duration:0];
     }
+    if(MESIBO_STATUS_SUSPEND == connectionStatus) {
+        return [self updateUserStatus:mMesiboUIOPtions.suspendedIndicationTitle duration:0];
+    }
     if(MESIBO_STATUS_CONNECTFAILURE == connectionStatus) {
         return [self updateUserStatus:mMesiboUIOPtions.offlineIndicationTitle duration:0];
     }
@@ -582,47 +539,37 @@
     }
     
     
-    long duration = mMesiboUIOPtions.mTypingIndicationTimeMs;
     NSString *status = nil;
+    MesiboProfile *profile = _mUser;
+    uint32_t groupid = 0;
+    if(params) {
+        groupid = params.groupid;
+        if(params.profile) profile = params.profile;
+    }
     
-    if(MESIBO_ACTIVITY_TYPING == activity) {
+    if([profile isTypingInGroup:groupid]) {
         [mUserData setTyping:nil];
         status = STATUS_TYPING;
         if(params && params.groupid && params.profile) {
-            NSString *name = params.profile.name;
+            NSString *name = [profile getName];
             if(!name)
-                name = params.profile.address;
+                name = [params.profile getAddress];
             status = [NSString stringWithFormat:@"%@ is %@", name, STATUS_TYPING];
         }
-    }
-    
-    if(MESIBO_ACTIVITY_LEFT == activity) {
-        mPrevActivityTime = 0;
-    }
-    
-    if(!status) {
-        if(![self isOnline] || _mUser.groupid) {
-            return [self updateUserStatus:nil duration:0];
-        }
-        
+    } else if(groupid && [profile isChatting]) {
+        status = STATUS_TYPING;
+    } else if(groupid && [profile isOnline]) {
         status = mMesiboUIOPtions.userOnlineIndicationTitle;
-        
-        duration = (ONLINE_TIME+1000) - ([MesiboInstance getTimestamp] - _mUser.lastActiveTime);
-        if(duration <= 0)
-            return 0;
     }
     
-    return [self updateUserStatus:status duration:duration];
+    return [self updateUserStatus:status duration:0];
 }
 
 
 
 -(void) barButtonBackPressed:(id)sender {
-    //NSLog(@"back");
     if([mTableController cancelSelectionMode])
         return;
-    
-    //NSLog(@"back stop");
     
     if(mModel) {
         [mModel stop];
@@ -635,7 +582,7 @@
     
     NSMutableArray *allViewControllers = [NSMutableArray arrayWithArray:[self.navigationController viewControllers]];
     
-    [self.navigationController popToViewController:((UIViewController *)[allViewControllers objectAtIndex:0]) animated:YES];
+    [self.navigationController popViewControllerAnimated:YES];
     
 }
 
@@ -652,7 +599,9 @@
     _mContextMenu.hidden = NO;
     
     [MesiboInstance setAppInForeground:self screenId:1 foreground:YES];
-    [mModel updateConnectionStatus];
+    if(mModel) {
+        [mModel start];
+    }
 
 }
 
@@ -661,13 +610,30 @@
     [super viewDidDisappear:YES];
     
     _mContextMenu.alpha = 0;
-    //[MesiboInstance setAppInForeground:self screenId:1 foreground:NO];
-    [self sendPresence:MESIBO_ACTIVITY_LEFT];
+    if(![_mUser getGroupId])
+        [self sendPresence:MESIBO_ACTIVITY_LEFT];
     
     if(mModel) {
         [mModel stop];
     }
     
+    
+}
+
+-(void)screenLock:(NSNotification *)notification {
+    [MesiboInstance setAppInForeground:self screenId:1 foreground:YES];
+    if(mModel) {
+        [mModel start];
+    }
+}
+
+-(void)screenUnlock:(NSNotification *)notification {
+    if(![_mUser getGroupId])
+        [self sendPresence:MESIBO_ACTIVITY_LEFT];
+    
+    if(mModel) {
+        [mModel stop];
+    }
 }
 
 
@@ -676,7 +642,7 @@
     mUserNameLabel.text = [MesiboCommonUtils getUserName:_mUser];
     
     UIImage *updatedImage = nil;
-    NSString *picturePath = [MesiboInstance getProfilePicture:_mUser type:MESIBO_FILETYPE_AUTO];
+    NSString *picturePath = [_mUser getImageOrThumbnailPath];
     
     if(picturePath) {
         updatedImage = [UIImage imageWithContentsOfFile:picturePath];
@@ -690,42 +656,29 @@
     
     if(nil != updatedImage) {
         [ud setThumbnail:updatedImage];
-        //[mProfileThumbnail setImage:updatedImage forState:UIControlStateNormal];
         [self setProfilePicture];
     }
     
-    // move it after we do reconnect in didapper(forreground indication)
-    //int b = [MesiboInstance getConnectionStatus];
-    //[self Mesibo_OnConnectionStatus:b];
     
     [MesiboCommonUtils setNavigationBarColor:self.navigationController.navigationBar color:mPrimaryColor];
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
     
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenLock:) name:UIApplicationProtectedDataDidBecomeAvailable object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenUnlock:) name:UIApplicationProtectedDataWillBecomeUnavailable object:nil];
+    
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
                                    initWithTarget:self
                                    action:@selector(dismissKeyboard)];
-    //tap.delegate = self;
     [tap setCancelsTouchesInView:YES]; // to pass tap to other views
     [self.view addGestureRecognizer:tap];
-    /*
-     UITapGestureRecognizer *Singletap = [[UITapGestureRecognizer alloc]
-     initWithTarget:_mChatEdit
-     action:@selector(closeContextMenu)];
-     [self.view addGestureRecognizer:Singletap];*/
-    
-    
-    
-    //[self scrollToLatestChat:NO];
-    //[self scrollToBottom:nil animated:NO];
-    // [self scrollToLatestChat:NO];
     
     if(_mUser != nil) {
         
-        if(![_mUser.draft isEqualToString:@""] && _mUser.draft !=nil) {
+        if(![[_mUser getDraft] isEqualToString:@""] && [_mUser getDraft] !=nil) {
             
-            _mChatEdit.text=_mUser.draft;
+            _mChatEdit.text=[_mUser getDraft];
             _mChatEdit.textColor = [UIColor blackColor];
             
         }
@@ -741,6 +694,7 @@
     
 }
 
+
 - (void) viewDidLayoutSubviews {
     
     [mTableController scrollToBottom:NO];
@@ -749,7 +703,6 @@
     mChatBoxExtendedFrame = mChatBoxframe;
     mChatBoxExtendedFrame.size.width +=40;
     
-    //[self scrollToLatestChat:NO];
     
     
 }
@@ -757,8 +710,6 @@
 - (void)viewWillDisappear:(BOOL)animated {
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:UIKeyboardWillHideNotification object:nil];
-    
-    //[MesiboInstance sendActivity:mesiboParam activity:ACTIVITY_OFFLINE interval:3000];
     
     if(_mUser != nil) {
         
@@ -779,8 +730,12 @@
     // Dispose of any resources that can be recreated.
 }
 
-
-
+- (BOOL) Mesibo_onFileTransferProgress:(MesiboFileInfo *)file {
+    if([file isTransferred]) {
+        
+    }
+    return YES;
+}
 
 -(UIAlertAction *) addAlert:(UIAlertController *)view title:(NSString *)title type:(int) filetype {
     return [UIAlertAction
@@ -792,7 +747,6 @@
                     [self pickMediaWithFiletype:filetype];
                 
                 [self closeContextMenu];
-                //Do some thing here
                 [view dismissViewControllerAnimated:YES completion:nil];
             }];
 }
@@ -814,7 +768,6 @@
     UIAlertAction* location = [self addAlert:view title:PICKER_ALERT_LOCATION_TITLE type:PICK_LOCATION];
     UIAlertAction* audio = [self addAlert:view title:PICKER_ALERT_AUDIO_TITLE type:PICK_AUDIO_FILES];
     UIAlertAction* files = [self addAlert:view title:PICKER_ALERT_FILES_TITLE type:PICK_DOCUMENTS];
-    //UIAlertAction* facebook = [self addAlert:view title:@"Facebook" type:PICK_FACEBOOK_IMAGES];
     UIAlertAction* cancel = [self addAlert:view title:PICKER_ALERT_CANCEL_TITLE type:-1];
     
     
@@ -823,7 +776,6 @@
     [view addAction:location];
     [view addAction:audio];
     [view addAction:files];
-    //[view addAction:facebook];
     
     [view addAction:cancel];
     [self presentViewController:view animated:YES completion:nil];
@@ -838,8 +790,6 @@
     [MesiboUIManager pickImageData:im withParent:self withMediaType:filetype withBlockHandler:^(ImagePickerFile *picker) {
         
         
-        //dispatch_async(dispatch_get_main_queue(), ^{
-        
         NSLog(@"Returned data %@", [picker description]);
         
         [self applicationFileTypeMapping:picker];
@@ -847,13 +797,6 @@
         
         if(picker.fileType == MESIBO_FILETYPE_LOCATION) {
             [self insertMessage:picker];
-            /*
-             dispatch_async(dispatch_get_main_queue(), ^{
-             [self insertMessage:picker];
-             
-             });
-             */
-            
         }else  {
             
             BOOL hdControl = YES ;
@@ -863,14 +806,11 @@
             
             
             [MesiboUIManager launchImageEditor:im withParent:self withImage:picker.image title:nil hideEditControls:hdControl showCaption:YES showCropOverlay:NO squareCrop:NO maxDimension:1280  withBlock:^BOOL(UIImage *image, NSString *caption) {
-                //dispatch_async(dispatch_get_main_queue(), ^{
-                // Your UI code //
                 picker.message = caption;
                 picker.image = image;
                 
                 [self insertMessage:picker];
                 
-                //});
                 NSLog(@"message data %@",caption);
                 return YES;
                 
@@ -881,9 +821,6 @@
         
         _mChatEdit.text = @"";
         _height_parent.constant = mOrgParentHeight;
-        
-        // });
-        
         
     }];
     
@@ -968,16 +905,12 @@
         ml.lat = picker.lat;
         ml.lon = picker.lon;
         ml.url = picker.url;
-        //ml.filePath = c.mImagePath;
-        //ml.image = [UIImage imageWithContentsOfFile:c.mImagePath];
-        //c.mImage = [UIImage imageWithContentsOfFile:c.mImagePath];
         ml.image = nil; // nil will enable viewholder to set default image and initiate update location image
         
         [m setLocation:ml];
         [mModel insert:m];
         [mTableController insert:m];
         
-        //[MesiboInstance updateLocationImage:mesiboParam location:ml];
         if(MESIBO_RESULT_OK != [MesiboInstance sendLocation:mMesiboParam msgid:(u_int32_t)m.mid location:ml]){
             [self markSendingFailed:0 status:MESIBO_MSGSTATUS_FAIL mids:(uint32_t)m.mid];
         }
@@ -986,15 +919,11 @@
         
         MesiboFileInfo *mf = [MesiboInstance getFileInstance:mMesiboParam msgid:m.mid mode:MESIBO_FILEMODE_UPLOAD type:picker.fileType source:MESIBO_FILESOURCE_MESSAGE filePath:picker.mp4Path?picker.mp4Path:picker.filePath url:nil listener:self];
         
-        //BOOL ex = [MesiboInstance fileExists:picker.filePath];
-        
         mf.mid= m.mid;
         mf.message = picker.message;
-        //mf.filePath = c.mImagePath;
         mf.image = picker.image;
         mf.asset = picker.phasset;
         mf.localIdentifier = picker.localIdentifier;
-        //[mf setPath:picker.filePath];
         mf.userInteraction = YES;
         
         [m setFile:mf];
@@ -1004,13 +933,11 @@
         
         if(!picker.mp4Path) {
             
-            //[MesiboInstance sendFile:mesiboParam msgid:(u_int32_t)c.mMessageID file:mf];
             if(MESIBO_RESULT_OK != [MesiboInstance sendFile:mMesiboParam msgid:(u_int32_t)m.mid file:mf]){
                 [self markSendingFailed:0 status:MESIBO_MSGSTATUS_FAIL mids:(uint32_t)m.mid];
-                [self Mesibo_onFileTransferProgress:mf];
+                [mModel Mesibo_onFileTransferProgress:mf];
             } 
         } else {
-            //These both points to mov file resources, hence we are setting ot to null
             mf.localIdentifier = nil;
             mf.asset = nil;
             
@@ -1022,8 +949,7 @@
         }
     }
     
-    mPrevActivityTime = 0;
-    
+   
     return m;
     
 }
@@ -1041,10 +967,6 @@
     if(![message length])
         return;
     
-    /*
-     NSData *data = [message dataUsingEncoding:NSNonLossyASCIIStringEncoding];
-     NSString *goodValue = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];*/
-    
     
     
     for (NSString *emojiKey in [[TextToEmoji getInstance] getEmojiTextStrings]){
@@ -1053,29 +975,24 @@
             message = [message stringByReplacingOccurrencesOfString:emojiKey withString:smiley];
         }
     }
-    /*
-     NSData *data1 = [goodValue dataUsingEncoding:NSUTF8StringEncoding];
-     
-     NSString *goodValue1 = [[NSString alloc] initWithData:data1 encoding:NSNonLossyASCIIStringEncoding];*/
-    
     
     MesiboMessage *m = [self insertTextMessage:message];
     
     if(MESIBO_RESULT_OK != [MesiboInstance sendMessage:(MesiboParams *) mMesiboParam msgid:(uint32_t)m.mid string:message]){
         [self markSendingFailed:0 status:MESIBO_MSGSTATUS_FAIL mids:(uint32_t)m.mid];
     }
-    
-    mPrevActivityTime = 0;
-    
+       
     _mChatEdit.text = @"";
     
     if(_mUser != nil  ) {
-        if(![_mUser.draft isEqualToString:@""] ){
+        if(![[_mUser getDraft] isEqualToString:@""]){
             _mUser.draft = @"";
         }
     }
     _height_parent.constant = mOrgParentHeight;
-    _mCameraBtn.hidden=NO;
+    
+    if(showAttachments)
+        _mCameraBtn.hidden=NO;
     
     
 }
@@ -1125,19 +1042,11 @@
 
 #pragma mark - UITableViewDelegate
 
-/*
- - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section
- {
- return [self.messageData titleForSection:section];
- }*/
-
 
 #pragma mark - keyboard movements
 - (void)keyboardWillShow:(NSNotification *)notification
 {
     
-    // [_mChatEdit removeConstraints:_mChatEdit.constraints];
-    //closeMediaPane = false;
     [self setCloseMediaPaneValue:false];
     
     CGRect keyboardFrame = [[[notification userInfo] objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
@@ -1180,7 +1089,6 @@
     if(![_mChatEdit.text length])
         _mCameraBtn.hidden = NO;
     
-    //closeMediaPane = false;
     [self setCloseMediaPaneValue:false];
 }
 
@@ -1190,7 +1098,6 @@
         textView.text = @"";
         textView.textColor = [UIColor blackColor]; //optional
     }
-    //[textView becomeFirstResponder];
     
     [self closeContextMenu];
     
@@ -1205,8 +1112,6 @@
 - (void)textViewDidEndEditing:(UITextView *)textView
 {
     if ([textView.text isEqualToString:@""]) {
-        //textView.text = CHATBOX_PLACE_HOLDER_TEXT;
-        //textView.textColor = [UIColor lightGrayColor]; //optional
     }
     
     
@@ -1215,7 +1120,9 @@
 
 
 - (void)textFieldDidEndEditing:(UITextField *)textField {
+#ifdef USE_PLACEHOLDER
     textField.placeholder = CHATBOX_PLACE_HOLDER_TEXT;
+#endif
 }
 - (BOOL)textFieldShouldReturn:(UITextField *)textField
 {
@@ -1238,17 +1145,12 @@
     if(closeMediaPane) {
         [self closeContextMenu];
     }
-    if(textView.text.length ==0) {
-        
+    if(!textView.text.length) {
         _mCameraBtn.hidden=NO;
-        
     }else {
-        
         _mCameraBtn.hidden=YES;
-        
+        [self sendPresence:MESIBO_ACTIVITY_TYPING];
     }
-    
-    [self sendPresence:MESIBO_ACTIVITY_TYPING];
     
     [self animateTextView];
 }
@@ -1292,22 +1194,46 @@
     //required
 }
 
+#define CGRectSetWidth(rect, w)    CGRectMake(rect.origin.x, rect.origin.y, w, rect.size.height)
+#define ViewSetWidth(view, w)   view.frame = CGRectSetWidth(view.frame, w)
+- (void) closeContextMenu {
+    //closeMediaPane = false;
+    [self setCloseMediaPaneValue:false];
+    [UIView beginAnimations:nil context:nil];
+    [UIView setAnimationDuration:0.3];
+    [UIView setAnimationCurve:UIViewAnimationCurveEaseInOut];
+    //_mContextMenu.frame = CGRectMake(contextMenuFrame.origin.x,_mContextMenu.frame.origin.y,_mContextMenu.frame.size.width,_mContextMenu.frame.size.height);
+    
+    //_mChatEdit.frame = CGRectMake(chatEditFrame.origin.x,_mChatEdit.frame.origin.y,chatEditFrame.size.width,_mChatEdit.frame.size.height);
+    
+    _mContextMenu.frame = contextMenuFrame;
+    _mChatEdit.frame = chatEditFrame;
+    
+    [UIView commitAnimations];
+    
+}
 
 - (IBAction)openContexMenu:(id)sender {
     if(! closeMediaPane) {
         //closeMediaPane = true;
         [self setCloseMediaPaneValue:true];
+        
+            
         CGFloat shift = _mContextMenu.frame.size.width-CGRectGetMaxX(_mContextMenu.frame);
+        
+        _mChatEdit.translatesAutoresizingMaskIntoConstraints = YES;
+        _mContextMenu.translatesAutoresizingMaskIntoConstraints = YES;
+        
+        
         [UIView animateWithDuration:0.7
                               delay:0.0
              usingSpringWithDamping:0.7
               initialSpringVelocity:0.5
                             options:UIViewAnimationOptionCurveEaseInOut animations:^{
                                 //Animations
-                                _mContextMenu.frame = CGRectMake(0,_mContextMenu.frame.origin.y,_mContextMenu.frame.size.width,_mContextMenu.frame.size.height);
+                                _mContextMenu.frame = CGRectMake(0, _mContextMenu.frame.origin.y, _mContextMenu.frame.size.width, _mContextMenu.frame.size.height);
                                 
-                                _mChatEdit.frame = CGRectMake(CGRectGetMaxX(_mContextMenu.frame)+1,_mChatEdit.frame.origin.y,_mChatEdit.frame.size.width-shift,_mChatEdit.frame.size.height);
-                                
+                                _mChatEdit.frame = CGRectMake(_mContextMenu.frame.size.width+10, _mChatEdit.frame.origin.y, _mChatEdit.frame.size.width - _mContextMenu.frame.size.width, _mChatEdit.frame.size.height);
                                 
                             }
                          completion:^(BOOL finished) {
@@ -1322,19 +1248,7 @@
     
 }
 
-- (void) closeContextMenu {
-    //closeMediaPane = false;
-    [self setCloseMediaPaneValue:false];
-    [UIView beginAnimations:nil context:nil];
-    [UIView setAnimationDuration:0.3];
-    [UIView setAnimationCurve:UIViewAnimationCurveEaseInOut];
-    _mContextMenu.frame = CGRectMake(contextMenuFrame.origin.x,_mContextMenu.frame.origin.y,_mContextMenu.frame.size.width,_mContextMenu.frame.size.height);
-    
-    _mChatEdit.frame = CGRectMake(chatEditFrame.origin.x,_mChatEdit.frame.origin.y,chatEditFrame.size.width,_mChatEdit.frame.size.height);
-    
-    [UIView commitAnimations];
-    
-}
+
 - (IBAction)captureImage:(id)sender {
     [self pickMediaWithFiletype:PICK_CAMERA_IMAGE];
     
@@ -1402,7 +1316,6 @@
     
     mReplyImageThumb = nil;
     
-    //__weak MesiboMessageViewHolder *wself = self;
     [UIView
      animateWithDuration:0.5
      
@@ -1537,12 +1450,10 @@
 }
 
 - (void) onMessageStatus:(int)status {
-    if(MESIBO_MSGSTATUS_INVALIDDEST == status && _mUser.groupid > 0) {
-        //[MesiboUIAlerts showDialogue:MSG_STATUS_131_4GROUP_MESSAGE withTitle:MSG_STATUS_131_4GROUP_TITLE];
+    if(MESIBO_MSGSTATUS_INVALIDDEST == status && [_mUser getGroupId] > 0) {
         _mChatView.hidden = YES;
-        _mUser.flag |= MESIBO_USERFLAG_DELETED;
         //TBD, this is not a right way
-        [[MesiboInstance getDelegates] Mesibo_onUpdateUserProfiles:_mUser];
+        //[[MesiboInstance getDelegates] Mesibo_onUpdateUserProfiles:_mUser];
         [self updateUserStatus:nil duration:0];
         mSendEnabled = NO;
         NSLog(@"updated deleted profile");

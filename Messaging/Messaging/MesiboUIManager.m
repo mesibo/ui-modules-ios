@@ -85,7 +85,7 @@
 
 }
 
-+(void) launchMessageViewController1:(UIViewController *) parent withUserData : (MesiboUserProfile*) userProfile {
++(void) launchMessageViewController1:(UIViewController *) parent withUserData : (MesiboProfile*) userProfile {
     
     if(!parent)
         return;
@@ -104,12 +104,13 @@
     
 }
 
-+ (void) launchCreatNewGroupController:(UIViewController *)parent withMemeberProfiles:(NSMutableArray*) profileArray withGroupId:(uint32_t) groupid  modifygroup:(BOOL)modifygroup  uidelegate:(id)uidelegate{
++ (void) launchCreatNewGroupController:(UIViewController *)parent withMemeberProfiles:(NSMutableArray*)profileArray existingMembers:(NSMutableArray *)members withGroupId:(uint32_t) groupid  modifygroup:(BOOL)modifygroup  uidelegate:(id)uidelegate{
     
     CreateNewGroupViewController *clv = [parent.storyboard
                                          instantiateViewControllerWithIdentifier:@"CreateNewGroupViewController"];
     if([clv isKindOfClass:[CreateNewGroupViewController class]]) {
         clv.mMemberProfiles = profileArray;
+        clv.mExistingMembers = members;
         clv.mGroupid = groupid;
         clv.mGroupModifyMode = modifygroup;
         clv.mParenController = parent;

@@ -51,7 +51,7 @@
 #define  MAXLENGTH  50
 #define  GROUP_NAME_LENTH 2
 
-@interface CreateNewGroupViewController ()<UITableViewDataSource,UITableViewDelegate,UITextFieldDelegate,UIGestureRecognizerDelegate>
+@interface CreateNewGroupViewController ()<UITableViewDataSource,UITableViewDelegate,UITextFieldDelegate,UIGestureRecognizerDelegate, MesiboProfileDelegate>
 @property (weak, nonatomic) IBOutlet UITableView *mContactsTable;
 @property (weak, nonatomic) IBOutlet UITextField *mGroupNameEditor;
 
@@ -66,17 +66,19 @@
 @implementation CreateNewGroupViewController
 
 {
-    NSString *mGroupPicturePath;
     NSString *mGroupStatus;
     UIColor *mPrimaryColor;
     
     uint32_t mGroupId;
     MesiboUiOptions *mMesiboUIOptions;
+    MesiboProfile *mProfile;
+    UIImage *mGroupImage;
+    BOOL mDone;
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    mMesiboUIOptions = [MesiboInstance getUiOptions];
+    mMesiboUIOptions = [MesiboUI getUiOptions];
     self.title = mMesiboUIOptions.createGroupTitle;
     if(_mGroupModifyMode)
         self.title = MODIFY_GROUP_TITLE_STRING;
@@ -85,14 +87,17 @@
     if(mMesiboUIOptions.mToolbarColor)
         mPrimaryColor = [UIColor getColor:mMesiboUIOptions.mToolbarColor];
     
-    MesiboUserProfile *mesiboGroupProfile = nil;
+       
+    mProfile = nil;
+    mGroupImage = nil;
+    mDone = NO;
     
     mGroupId = _mGroupid;
     
     if(mGroupId > 0) {
-        mesiboGroupProfile = [MesiboInstance getGroupProfile:mGroupId];
-        if(mesiboGroupProfile)
-            _mGroupName = mesiboGroupProfile.name;
+        mProfile = [MesiboInstance getProfile:nil groupid:mGroupId];
+        if(mProfile)
+            _mGroupName = [mProfile getName];
         
         _mGroupNameEditor.text = _mGroupName ;
     }
@@ -100,14 +105,17 @@
     _mContactsTable.delegate = self;
     _mContactsTable.dataSource = self;
     _mGroupNameEditor.delegate = self;
+    
     UIButton *button =  [UIButton buttonWithType:UIButtonTypeCustom];
     [button setImage:[MesiboImage imageNamed:@"ic_arrow_back_white.png"] forState:UIControlStateNormal];
     [button addTarget:self action:@selector(barButtonBackPressed:)forControlEvents:UIControlEventTouchUpInside];
     [button setFrame:CGRectMake(0, 0, 25, 25)];
+    
     UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
     self.navigationItem.leftBarButtonItem = barButton;
     _mContactsTable.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
     [_mContactsTable reloadData];
+    
     UITapGestureRecognizer *keyTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(keyTapPressed)];
     keyTap.numberOfTapsRequired = 1;
     [self.view addGestureRecognizer:keyTap];
@@ -118,21 +126,20 @@
     _mGroupImage.userInteractionEnabled = YES;
     [_mGroupImage addGestureRecognizer:pictureTap];
     
-    _mCharCounter.text = [NSString stringWithFormat:@"%d",MAXLENGTH];
-    
-    mGroupPicturePath = nil;
-    
-    NSString *picturePath = [MesiboImage getDefaultGroupProfilePath];
-    if(mesiboGroupProfile) {
-        picturePath = [MesiboInstance getProfilePicture:mesiboGroupProfile type:MESIBO_FILETYPE_AUTO];
-        if(!picturePath)
-            picturePath = [MesiboImage getDefaultGroupProfilePath];
+    _mCharCounter.text = [NSString stringWithFormat:@"%d", MAXLENGTH];  
+   
+    NSString *picturePath = nil;
+    if(mProfile) {
+        _mGroupImage.image = [mProfile getThumbnail];
+    } else {
+        NSString *picturePath = [MesiboImage getDefaultGroupProfilePath];
+        _mGroupImage.image = [UIImage imageWithContentsOfFile:picturePath];
     }
     
-    _mGroupImage.image = [UIImage imageWithContentsOfFile:picturePath];
-        
     [self.navigationController.navigationBar setTitleTextAttributes:
      @{NSForegroundColorAttributeName:[UIColor getColor:NAVIGATION_TITLE_COLOR]}];
+    
+    [MesiboInstance addListener:self];
 }
 
 -(void) viewWillAppear:(BOOL)animated {
@@ -142,16 +149,119 @@
 
 - (void) keyTapPressed {
     [_mGroupNameEditor resignFirstResponder];
-    
 }
 
 -(IBAction)barButtonBackPressed:(id)sender {
     
-    
-    ((UserListViewController *)_mParenController).mGroupMembers = _mMemberProfiles;
+    [((UserListViewController *)_mParenController) setGroupMembers:_mMemberProfiles];
     
     //[self dismissViewControllerAnimated:YES completion:nil];
     [self.navigationController popViewControllerAnimated:YES];
+    
+}
+
+-(void) closeController {
+    int previousController ;
+    
+    if(mGroupId==0) {
+        previousController = 3 ;
+    }else {
+        previousController = 2;
+    }
+    
+    
+    //TBD, copy image profile
+    
+    if(mGroupId == 0) {
+        
+        if(mProfile)
+            [MesiboUIManager launchMessageViewController:self withUserData:mProfile uidelegate:_mUiDelegate];
+        
+        NSMutableArray *navigationArray = [[NSMutableArray alloc] initWithArray: self.navigationController.viewControllers];
+        int index = (int)[navigationArray count]-2;
+        if(index >= 0) [navigationArray removeObjectAtIndex:index];  // You can pass your index here
+        if(index >= 1) [navigationArray removeObjectAtIndex:index-1];  // You can pass your index here
+        if(index >= 2) [navigationArray removeObjectAtIndex:index-2];  // You can pass your index here
+        
+        self.navigationController.viewControllers = navigationArray;
+        
+        
+    } else {
+        
+        UIViewController *popViewController = self.navigationController.viewControllers[self.navigationController.viewControllers.count-previousController-1];
+        
+        [self.navigationController popToViewController:popViewController animated:YES];
+        
+    }
+}
+
+-(BOOL) isExistingMember:(MesiboProfile *) profile {
+    if(!_mExistingMembers) return NO;
+    for(MesiboProfile *p in _mExistingMembers) {
+        if(p == profile) return YES;
+    }
+    
+    return NO;
+}
+
+// TBD, handle deleted members
+-(void) setMembers {
+    //return;
+    NSMutableArray *members = [NSMutableArray new];
+    for(int i = 0; i< [_mMemberProfiles count]; i++) {
+        
+        MesiboProfile *mup = [_mMemberProfiles objectAtIndex:i];
+        if([self isExistingMember:mup]) continue;
+        [members addObject:[mup getAddress]];
+    }
+    
+    if(!members.count) return;
+    
+    MesiboGroupProfile *gp = [mProfile getGroupProfile];
+    [gp addMembers:members permissions:MESIBO_MEMBERFLAG_ALL adminPermissions:0];
+}
+
+-(void) setGroup:(MesiboProfile *) profile {
+    mProfile = profile;
+  
+    [mProfile setName:_mGroupNameEditor.text];
+    if(mGroupImage) {
+        [profile setImage:mGroupImage];
+        mGroupImage = nil; // so that it does not set again
+    }
+    [mProfile save];
+    
+}
+
+-(void) MesiboProfile_onUpdate:(MesiboProfile *)profile {
+    
+    if(profile != mProfile || mDone) return;
+    mDone = YES;
+    [mProfile removeListener:self];
+    [self setMembers];
+    [self closeController];
+}
+
+
+-(void) Mesibo_onGroupCreated:(MesiboProfile *) profile {
+    // if group is created, we need to update only if image is set else, we can set member and exit
+    mProfile = profile;
+    //[mProfile addListener:self];
+    //return;
+    if(mGroupImage) {
+        [mProfile addListener:self];
+        [self setGroup:profile];
+        return;
+    }
+    [self setMembers];
+    [self closeController];
+}
+
+-(void) Mesibo_onGroupJoined:(MesiboProfile *)groupProfile {
+    
+}
+
+-(void) Mesibo_onGroupError:(MesiboProfile *)groupProfile error:(uint32_t)error {
     
 }
 
@@ -160,89 +270,35 @@
         [MesiboUIAlerts showDialogue:GROUP_NAME_FAIL_MSG withTitle:GROUP_NAME_FAIL_TITLE];
         return;
     }
+    
     if([_mMemberProfiles count] <= 0 ){
         [MesiboUIAlerts showDialogue:CREATE_GROUP_NOMEMEBER_MESSAGE_STRING withTitle:CREATE_GROUP_NOMEMEBER_TITLE_STRING];
         return;
     }
     
-    NSMutableArray *members = [NSMutableArray new];
-    for(int i = 0; i<[_mMemberProfiles count];i++) {
-        
-        MesiboUserProfile *mup = [_mMemberProfiles objectAtIndex:i];
-        [members addObject:mup.address];
+    MesiboGroupSettings *gs = [MesiboGroupSettings new];
+    gs.name = _mGroupNameEditor.text;
+    gs.flags = 0;
+    
+    if(!mGroupId) {
+        [MesiboInstance createGroup:gs listener:self];
+        return;
     }
     
-    
-    MesiboUserProfile *p = [MesiboUserProfile new];
-    p.groupid = mGroupId;
-    p.name = _mGroupNameEditor.text;
-    p.status = nil;
-    p.picturePath = mGroupPicturePath;
-    
-    [[MesiboInstance getDelegates] Mesibo_onSetGroup:self profile:p type:0 members:members handler:^(uint32_t groupid) {
-        
-        if(groupid <= 0) {
-            [MesiboUIAlerts showDialogue:GROUP_CREATION_FAIL_MSG withTitle:GROUP_CREATION_FAIL_TITLE];
-            return;
-            
-        }
-        
-        MesiboUserProfile *mesiboGroupProfile = [MesiboInstance getGroupProfile:groupid];
-        int previousController ;
-        
-        // TBD Anirudh, can we fix 2,3 ?
-        if(mGroupId==0) {
-            //mesiboGroupProfile = [[MesiboUserProfile alloc] init];
-            previousController = 3 ;
-        }else {
-            //mesiboGroupProfile = [MesiboInstance getGroupProfile:mGroupId];
-            previousController = 2;
-        }
-        
-        
-        //TBD, copy image profile (Namitha)
-        
-        if(mGroupId==0) {
-            
-            [MesiboUIManager launchMessageViewController:self withUserData:mesiboGroupProfile uidelegate:_mUiDelegate];
-            NSMutableArray *navigationArray = [[NSMutableArray alloc] initWithArray: self.navigationController.viewControllers];
-            int index = (int)[navigationArray count]-2;
-            [navigationArray removeObjectAtIndex:index];  // You can pass your index here
-            [navigationArray removeObjectAtIndex:index-1];  // You can pass your index here
-            [navigationArray removeObjectAtIndex:index-2];  // You can pass your index here
-            
-            self.navigationController.viewControllers = navigationArray;
-            
-            
-        } else {
-            
-            UIViewController *popViewController = self.navigationController.viewControllers[self.navigationController.viewControllers.count-previousController-1];
-            
-            [self.navigationController popToViewController:popViewController animated:YES];
-            
-        }
-        
-        
-        
-    }];
-    
+    [self setGroup:mProfile];
+    [self setMembers];
+    [self closeController];
 }
 
 
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    // Return the number of sections.
     return 1;
-    
 }
-
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-
-        return  [_mMemberProfiles count];
-    
+    return  [_mMemberProfiles count];
 }
-
 
 - (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string {
     
@@ -250,7 +306,6 @@
     if(newText.length>MAXLENGTH) {
         return NO;
     }
-    
     [_mCharCounter setText:[NSString stringWithFormat:@"%u", (uint32_t)(MAXLENGTH-newText.length)]];
     
     return YES;
@@ -267,24 +322,24 @@
                   initWithStyle:UITableViewCellStyleDefault
                   reuseIdentifier:resueIdentifier];
     }
-    MesiboUserProfile *mp = [_mMemberProfiles objectAtIndex:indexPath.row];
+    MesiboProfile *mp = [_mMemberProfiles objectAtIndex:indexPath.row];
     
     UIImageView *profileImage = [cell viewWithTag:100];
     UserData *ud = [UserData getUserDataFromProfile:mp];
     [profileImage layoutIfNeeded];
     UIImage *image = [ud getThumbnail];
     if(!image)
-        image = [ud getDefaultImage:[MesiboInstance getUiOptions].useLetterTitleImage];
+        image = [ud getDefaultImage:[MesiboUI getUiOptions].useLetterTitleImage];
     
     profileImage.image = image;
     profileImage.layer.cornerRadius = profileImage.layer.frame.size.width/2;
     profileImage.layer.masksToBounds = YES;
     
     UILabel *name = [cell viewWithTag:101];
-    name.text = mp.name;
+    name.text = [ud getName];
     
     UILabel *status = [cell viewWithTag:102];
-    status.text = mp.status;
+    status.text = [mp getStatus];
     
     UIButton *cancelBtn = [cell viewWithTag:103];
     [cancelBtn setTag:indexPath.row];
@@ -317,17 +372,17 @@
                                                             preferredStyle:UIAlertControllerStyleActionSheet];
     UIAlertAction *firstAction = [UIAlertAction actionWithTitle:CAMERA_STRING
                                                           style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
-                                                              [self pickMediaWithFiletype:PICK_CAMERA_IMAGE];
-                                                          }];
+        [self pickMediaWithFiletype:PICK_CAMERA_IMAGE];
+    }];
     UIAlertAction *secondAction = [UIAlertAction actionWithTitle:PHOTOGALLERY_STRING
                                                            style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
-                                                               [self pickMediaWithFiletype:PICK_VIDEO_GALLERY];
-                                                           }];
+        [self pickMediaWithFiletype:PICK_VIDEO_GALLERY];
+    }];
     
     UIAlertAction *thirdAction = [UIAlertAction actionWithTitle:CANCEL_STRING
                                                           style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {
-                                                              NSLog(@"You pressed button cancel");
-                                                          }];
+        NSLog(@"You pressed button cancel");
+    }];
     
     
     [alert addAction:firstAction];
@@ -350,14 +405,7 @@
                     dispatch_async(dispatch_get_main_queue(), ^{
                         // Your UI code //
                         _mGroupImage.image = image;
-                        NSString *fileName = [NSString stringWithFormat:@"group%u.jpg", mGroupId];
-                        mGroupPicturePath = [[MesiboInstance getFilePath:MESIBO_FILETYPE_PROFILEIMAGE] stringByAppendingPathComponent:fileName];
-                        //NSData *imageData = UIImagePNGRepresentation(image);
-                        NSData *imageData = UIImageJPEGRepresentation(image, 0.7);
-                        [imageData writeToFile:mGroupPicturePath atomically:YES];
-                        MesiboUserProfile *mesiboGroupProfile = [MesiboInstance getGroupProfile:mGroupId];
-                        //((UserData*)mesiboGroupProfile.other).userThumbnail = [UIImage imageWithContentsOfFile:mGroupPicturePath];
-                        mesiboGroupProfile.picturePath = mGroupPicturePath;
+                        mGroupImage = image;
                     });
                     NSLog(@"message data %@",caption);
                     return YES;
@@ -372,7 +420,6 @@
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
 }
 
 

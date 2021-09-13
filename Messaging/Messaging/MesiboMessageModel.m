@@ -46,7 +46,7 @@
 @interface MesiboMessageModel ()
 {
     MesiboParams *mParams;
-    MesiboUserProfile *mProfile;
+    MesiboProfile *mProfile;
     //BOOL mMode;
     BOOL mEnableTimestamp;
     BOOL mEnableMessages;
@@ -107,7 +107,6 @@
         mEnableTimestamp = NO;
     else {
         mProfile = [MesiboInstance getProfile:mParams.peer groupid:mParams.groupid];
-        mEnableReadReceipt = NO;
     }
     
     mReadSession = [MesiboReadSession new];
@@ -139,6 +138,15 @@
     [self Mesibo_OnConnectionStatus:b];
 }
 
+-(void) Mesibo_OnSync:(int)count {
+    if(count > 0) {
+        mHasMoreMessages = YES;
+        id thiz = self;
+        [MesiboInstance runInThread:YES handler:^{
+            [thiz loadMessages:count];
+        }];
+    }
+}
 -(BOOL) loadMessages:(int)count {
     if(!mHasMoreMessages)
         return NO;
@@ -148,7 +156,12 @@
     
     int rv = [mReadSession read:count];
     
-    mHasMoreMessages = (count == rv);
+    mHasMoreMessages = NO;
+    if(count == rv) {
+        mHasMoreMessages = YES;
+    } else {
+        [mReadSession sync:count listener:self];
+    }
     return YES;
 }
 
@@ -394,9 +407,6 @@
     if(nil == data) return;
     
     if(MESIBO_MSGSTATUS_READ == params.status) {
-        if(params.groupid > 0)
-            return;
-        
         [self setReadStatus];
         return;
     }
@@ -515,6 +525,8 @@
     NSLog(@"File Progress: %d", [file getProgress]);
     MesiboMessageView *c = (MesiboMessageView *)[file getData];
     
+    if(!c) return YES;
+    
     MesiboMessageViewHolder *vh = [c getViewHolder];
     if(!vh)
       return YES;
@@ -587,6 +599,8 @@
     //TBD. onMessageStatus is always from someone, never group
     if(![self isForMeParam:params]) return;
     
+    if(params.groupid > 0 && [params isMessageStatusInProgress]) return;
+    
     int status = params.status;
     mLastMessageStatus = status;
     
@@ -622,9 +636,7 @@
     return [self onFileTransferProgress:file];
 }
 
--(void) Mesibo_onUserProfileUpdated:(MesiboUserProfile *)profile action:(int)action refresh:(BOOL)refresh {
-    if(!refresh)
-        return;
+-(void) Mesibo_onProfileUpdated:(MesiboProfile *)profile {
     
     if(profile != mProfile)
         return;

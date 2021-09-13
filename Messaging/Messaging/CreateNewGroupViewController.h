@@ -49,8 +49,9 @@
 
 @end 
 
-@interface CreateNewGroupViewController : UIViewController
+@interface CreateNewGroupViewController : UIViewController <MesiboDelegate>
 @property (strong , nonatomic) NSMutableArray   *mMemberProfiles;
+@property (strong , nonatomic) NSMutableArray   *mExistingMembers;
 @property (strong , nonatomic) UIViewController   *mParenController;
 @property (assign , nonatomic) BOOL mGroupModifyMode;
 

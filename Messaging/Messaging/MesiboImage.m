@@ -82,10 +82,10 @@ static NSMutableDictionary *mImageDict = nil;
         tintedImage = [MesiboImage imageNamed:@"ic_check"];
         tintedImage = [tintedImage imageTintedWithColor:[UIColor getColor:NORMAL_TICK_COLOR] ];
         [statusImages addObject:tintedImage];
-        tintedImage = [MesiboImage imageNamed:@"ic_check_circle"];
+        tintedImage = [MesiboImage imageNamed:@"ic_done_all"];
         tintedImage = [tintedImage imageTintedWithColor:[UIColor getColor:NORMAL_TICK_COLOR] ];
         [statusImages addObject:tintedImage];
-        tintedImage = [MesiboImage imageNamed:@"ic_check_circle"];
+        tintedImage = [MesiboImage imageNamed:@"ic_done_all"];
         tintedImage = [tintedImage imageTintedWithColor:[UIColor getColor:NOTIFIED_TICK_COLOR] ];
         [statusImages addObject:tintedImage];
         tintedImage = [MesiboImage imageNamed:@"ic_error"];
@@ -108,7 +108,7 @@ static NSMutableDictionary *mImageDict = nil;
 + (UIImage*) getCheckedImage {
     if(nil == mCheckedImage) {
         mCheckedImage = [MesiboImage imageNamed:@"ic_check_circle"];
-        mCheckedImage = [mCheckedImage imageTintedWithColor:[UIColor getColor:NORMAL_TICK_COLOR] ];
+        mCheckedImage = [mCheckedImage imageTintedWithColor:[UIColor getColor:CHECKED_COLOR] ];
     }
     return mCheckedImage;
 }
@@ -124,7 +124,7 @@ static NSMutableDictionary *mImageDict = nil;
     
     if(nil == mUserListChecked) {
         
-        userListChecked = [MesiboImage imageNamed:@"ic_check_circle"];
+        userListChecked = [MesiboImage imageNamed:@"ic_done_all"];
         userListChecked = [userListChecked imageTintedWithColor:[UIColor getColor:NOTIFIED_TICK_COLOR] ];
         mUserListChecked = [[UIImageView alloc] initWithImage:userListChecked];
         [mUserListChecked setFrame:CGRectMake(0, 0, 28.0, 28.0)];

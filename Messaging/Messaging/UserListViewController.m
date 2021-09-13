@@ -82,8 +82,14 @@
     UIColor *mStatusColor, *mTypingColor, *mPrimaryColor;
     int mTotalUnreadCount;
     MesiboReadSession *mReadSession;
+    
+    NSMutableArray* mGroupMembers;
+    MesiboProfile* mGroupProfile ;
 }
 
+-(void) setGroupMembers:(NSMutableArray *)members {
+    mGroupMembers = members;
+}
 
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -92,11 +98,12 @@
     mTotalUnreadCount = 0;
     mUiUpdateTimer = nil;
     mTiUpdateTimestamp = 0;
-    mMesiboUIOptions = [MesiboInstance getUiOptions];
+    mMesiboUIOptions = [MesiboUI getUiOptions];
     mUsersList = [[NSMutableArray alloc] init];
     mCommonNFilterArray = [[NSMutableArray alloc] init];
     mUtilityArray = [[NSMutableArray alloc] init];
     mSelectedMembers = [[NSMutableArray alloc] init];
+    mGroupMembers = [[NSMutableArray alloc] init];
     
     
     mPrimaryColor = [UIColor getColor:0xff00868b];
@@ -113,9 +120,11 @@
     // self.navigationController.navigationBar.barTintColor = mPrimaryColor;
     
     if(_mForwardGroupid) {
-        _mGroupProfile = [MesiboInstance getGroupProfile:_mForwardGroupid];
-        if(_mGroupProfile)
-            _mGroupMembers = [[MesiboInstance getDelegates] Mesibo_onGetGroupMembers:self groupid:_mForwardGroupid];
+        mGroupProfile = [MesiboInstance getGroupProfile:_mForwardGroupid];
+        [MesiboInstance addListener:self];
+        if(mGroupProfile && (!mGroupMembers || !mGroupMembers.count)) {
+            [[mGroupProfile getGroupProfile] getMembers:256 restart:YES listener:self];
+        }
     }
     
     
@@ -173,6 +182,17 @@
                 UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
                 [barBtnArray insertObject:barButton atIndex:0];
             }
+            
+            if(mMesiboUIOptions.enableMessageButton && (!btnArray || !btnArray.count)) {
+                UIButton *button =  [UIButton buttonWithType:UIButtonTypeCustom];
+                [button setImage:[UIImage imageNamed:@"ic_message_white"] forState:UIControlStateNormal];
+                [button setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
+                [button setTag:0];
+                [button addTarget:self action:@selector(uiBarButtonPressed:)forControlEvents:UIControlEventTouchUpInside];
+                UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
+                [barBtnArray insertObject:barButton atIndex:0];
+            }
+            
             self.navigationItem.rightBarButtonItems = barBtnArray;
             
         }
@@ -180,8 +200,6 @@
         UIFont *titleFont = [UIFont boldSystemFontOfSize:NAVBAR_TITLE_FONT_SIZE];;
         CGSize size = [mMesiboUIOptions.messageListTitle sizeWithAttributes:@{NSFontAttributeName: titleFont}];
         
-        // Values are fractional -- you should take the ceilf to get equivalent values
-        // we use width to calcuate number of lines
         CGSize titleSize = CGSizeMake(ceilf(size.width), ceilf(size.height));
         
         UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, NAVBAR_TITLEVIEW_WIDTH, 0)];
@@ -240,11 +258,8 @@
         self.navigationItem.leftItemsSupplementBackButton = YES;
         mUserStatusLbl.hidden = YES;
         
-        // [self.navigationItem setBarTintColor:mPrimaryColor];
     }
     
-    
-    //---- Search ------------------------------------------------------------------//
     
     self.searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
     self.searchController.searchResultsUpdater = self;
@@ -252,14 +267,12 @@
     
     self.searchController.searchResultsUpdater = self;
     self.searchController.searchBar.placeholder = nil;
-    //[self.searchController.searchBar sizeToFit];
     self.searchController.searchBar.frame = CGRectMake(self.searchController.searchBar.frame.origin.x,
                                                        self.searchController.searchBar.frame.origin.y,
                                                        self.searchController.searchBar.frame.size.width, 44.0);
     
     BOOL enableSearch = mMesiboUIOptions.enableSearch;
     
-    //TBD, search not working when two section is used and hence we are temporarily disabling it
     if(USERLIST_FORWARD_MODE == _mNewContactChooser || USERLIST_EDIT_GROUP_MODE == _mNewContactChooser)
         enableSearch = NO;
     
@@ -319,19 +332,14 @@
         mUiUpdateTimer = nil;
     }
     
-    //TBD, may be we can add time here itself
     mTiUpdateTimestamp = [MesiboInstance getTimestamp];
     
-    //NSLog(@"Updating table");
     if(nil == indexPath) {
         [_mUsersTableView reloadData];
         return;
     }
     
-    //NSIndexPath *indexPath = [NSIndexPath indexPathWithIndex:index inSection:0];
-    //[_mUsersTableView beginUpdates];
     @try {
-        //[_mUsersTableView reloadRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationMiddle];
         UITableViewCell *cell = [_mUsersTableView cellForRowAtIndexPath:indexPath];
         if(cell)
             [self updateCell:cell index:indexPath];
@@ -346,22 +354,20 @@
     [self refreshTable:nil];
 }
 
--(void) addToLookup:(MesiboUserProfile *) profile {
-    NSString *key = profile.address;
-    if(profile.groupid) {
-        key = [NSString stringWithFormat:@"group%u", profile.groupid];
+-(void) addToLookup:(MesiboProfile *) profile {
+    NSString *key = [profile getAddress];
+    if([profile getGroupId]) {
+        key = [NSString stringWithFormat:@"group%u", [profile getGroupId]];
     }
     
-    //[mProfilesLookup setObject:profile forKey:key];
 }
 
--(void) lookup:(MesiboUserProfile *) profile {
-    NSString *key = profile.address;
-    if(profile.groupid) {
-        key = [NSString stringWithFormat:@"group%u", profile.groupid];
+-(void) lookup:(MesiboProfile *) profile {
+    NSString *key = [profile getAddress];
+    if([profile getGroupId]) {
+        key = [NSString stringWithFormat:@"group%u", [profile getGroupId]];
     }
     
-    //TBD
 }
 
 -(void) updateNotificationBadge {
@@ -388,9 +394,8 @@
     NSDateFormatter *dateFormatter=[[NSDateFormatter alloc] init];
     [dateFormatter setDateFormat:@"HH:mm"];
     
-    //c.mInfoString = [dateFormatter stringFromDate:date];
     NSDateFormatter *dateFormatter1=[[NSDateFormatter alloc] init];
-    MesiboUserProfile *mp = params.profile;
+    MesiboProfile *mp = params.profile;
     if(params.groupProfile)
         mp = params.groupProfile;
     
@@ -408,20 +413,10 @@
      */
     if(YES && mIsMessageSearching) {
         NSLog(@"Searching");
-        mp = [[MesiboUserProfile alloc] init];
-        //mp.other = params.profile.other;
-        mp.address = params.peer;
-        mp.groupid = params.groupid;
-        mp.name = params.profile.name;
-        mp.picturePath =params.profile.picturePath;
-        mp.unread = params.profile.unread;
+        mp = [params.profile cloneProfile];
         
         if(params.groupProfile) {
-            mp.address = params.groupProfile.address;
-            mp.groupid = params.groupProfile.groupid;
-            mp.name = params.groupProfile.name;
-            mp.picturePath =params.groupProfile.picturePath;
-            mp.unread = params.groupProfile.unread;
+            mp = [params.groupProfile cloneProfile];
         }
     }
     
@@ -449,7 +444,7 @@
     }
     else{
         if(MESIBO_ORIGIN_DBSUMMARY == params.origin/* || MESIBO_ORIGIN_DBMESSAGE == params.origin */) {
-            [oud setUnreadCount:mp.unread];
+            [oud setUnreadCount:[mp getUnreadCount]];
         }
         else if(MESIBO_ORIGIN_REALTIME == params.origin){
             [oud setUnreadCount:[oud getUnreadCount]+1];
@@ -467,14 +462,11 @@
     if(YES || (!mIsMessageSearching && MESIBO_ORIGIN_DBSUMMARY != params.origin && MESIBO_ORIGIN_DBMESSAGE != params.origin)) {
         for(int i=0; i< [mTableList count]; i++) {
             
-            MesiboUserProfile *up = (MesiboUserProfile *)mTableList[i];
+            MesiboProfile *up = (MesiboProfile *)mTableList[i];
             UserData *ud = [UserData getUserDataFromProfile:up];
             
-            //TBD, if list in not reordered, we can only update a cell instead of table
             if([params compare:[ud getPeer] groupid:[ud getGroupId]]) {
                 [mTableList removeObjectAtIndex:i];
-                //[mTableList insertObject:params.profile atIndex:0];
-                //[_mUsersTableView reloadData];
                 break ;
             }
         }
@@ -490,7 +482,6 @@
     
     if(MESIBO_ORIGIN_REALTIME == params.origin) {
         
-        //TBD, we may update only the cell instead of table if list is not reordered
         uint64_t ts = [MesiboInstance getTimestamp];
                 
         if((ts - mTiUpdateTimestamp) > 2000) {
@@ -499,8 +490,6 @@
         }
         
         NSTimeInterval to = 2.0; // 1 second
-        // if the message we received is older (though realtime), we can allow more time for refresh as
-        // more messages might be coming
         if((ts - params.ts) < 5000) {
             to = 0.5; //half second
         }
@@ -527,13 +516,14 @@
 }
 
 -(void) Mesibo_OnMessage:(MesiboParams *)params data:(NSData *)data {
+    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
+        return;
     
     if([params isCall] && ![params isMissedCall]) {
         [self updateUiIfLastMessage:params];
         return;
     }
-    // this wil happen only for db messages when group is deleted
-    //, and then relogged-in with same db
+    
     if(params.groupid && !params.groupProfile) {
         [self updateUiIfLastMessage:params];
         return;
@@ -567,6 +557,8 @@
 }
 
 -(void) Mesibo_onFile:(MesiboParams *)params file:(MesiboFileInfo *)file {
+    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
+        return;
     
     NSString *fileType = ATTACHMENT_STRING;
     if(MESIBO_FILETYPE_IMAGE == file.type)
@@ -581,17 +573,23 @@
 }
 
 -(void) Mesibo_onLocation:(MesiboParams *)params location:(MesiboLocation *)location {
+    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
+        return;
     if(!params) return; // if location update
     [self addNewMessage:params message:LOCATION_STRING];
     [self updateUiIfLastMessage:params];
 }
 
 -(void) Mesibo_OnMessageStatus:(MesiboParams *)params {
+    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
+        return;
+    
+    if(MESIBO_ORIGIN_REALTIME == params.origin && params.groupid && [params isMessageStatusInProgress]) return;
     
     for(int j=0;j<[mUsersList count];j++) {
         
-        MesiboUserProfile *personz =[mUsersList objectAtIndex:j];
-        UserData *oud = (UserData *)personz.other;
+        MesiboProfile *personz =[mUsersList objectAtIndex:j];
+        UserData *oud = (UserData *) [personz getUserData];
         
         if(params.mid == [oud getMid]) {
             
@@ -603,7 +601,6 @@
             UITableViewCell* cell = [_mUsersTableView cellForRowAtIndexPath:indexPath];
             
             UILabel *pInfo = (UILabel*)[cell viewWithTag:102];
-            //pInfo.text = ((messageData*)[messagerList objectAtIndex:indexPath.row]).mLastMessage;
             [self setUserRow:[MesiboImage getStatusIcon:params.status] WithText:[oud getLastMessage] OnLabel:pInfo];
             
         }
@@ -617,7 +614,8 @@
         [self updateContactsSubTitle:mMesiboUIOptions.onlineIndicationTitle];
     } else if(status == MESIBO_STATUS_CONNECTING) {
         [self updateContactsSubTitle:mMesiboUIOptions.connectingIndicationTitle];
-        
+    } else if(status == MESIBO_STATUS_SUSPEND) {
+        [self updateContactsSubTitle:mMesiboUIOptions.suspendedIndicationTitle];
     } else if(status == MESIBO_STATUS_NONETWORK) {
         [self updateContactsSubTitle:mMesiboUIOptions.noNetworkIndicationTitle];
         
@@ -630,7 +628,7 @@
 
 
 -(void) Mesibo_onActivity:(MesiboParams *)params activity:(int)activity {
-    if(MESIBO_ACTIVITY_TYPING != activity && MESIBO_ACTIVITY_LEFT != activity) {
+    if(MESIBO_ACTIVITY_TYPING != activity && MESIBO_ACTIVITY_TYPINGCLEARED != activity && MESIBO_ACTIVITY_LEFT != activity) {
         return;
     }
     
@@ -640,7 +638,7 @@
     if(params.groupid && !params.groupProfile)
         return;
     
-    MesiboUserProfile *mp = params.profile;
+    MesiboProfile *mp = params.profile;
     if(params.groupProfile)
         mp = params.groupProfile;
     
@@ -655,14 +653,16 @@
     
 }
 
--(void) updateContacts:(MesiboUserProfile *) profile {
+
+
+-(void) updateContacts:(MesiboProfile *) profile {
     if(!profile) {
         [self showUserList:YES];
         return;
     }
     
     
-    if(!profile.other) {
+    if(![profile getUserData]) {
         //NSLog(@"No message for %@", profile.name);
         return;
     }
@@ -674,7 +674,7 @@
         if(!indexPath)
             return;
         
-        MesiboUserProfile *mp = [self getProfileAtIndexPath:indexPath];
+        MesiboProfile *mp = [self getProfileAtIndexPath:indexPath];
         
         // this can only happen when position moved or table refreshd
         if(mp && mp != profile) {
@@ -687,29 +687,12 @@
     
     return;
     
-#if 0
-    for(int j=0;j<[mUsersList count];j++) {
-        
-        MesiboUserProfile *p =[mUsersList objectAtIndex:j];
-        if(profile == p) {
-            UserData *ud = [UserData getUserDataFromProfile:profile];
-            [self refreshTable:[ud getUserListPosition]];
-            return;
-        }
-    }
-    
-    NSLog(@"Couldn't find any, refreshing table");
-    //else refresh entire table..... ?????
-    [self showUserList:YES]; // TBD, we need to update only a particular contact/row
-#endif
 }
 
--(void) Mesibo_onUserProfileUpdated:(MesiboUserProfile *)profile action:(int)action refresh:(BOOL)refresh {
-    if(!refresh)
-        return;
+-(void) Mesibo_onProfileUpdated:(MesiboProfile *)profile {
     
     // check before adding to up thread
-    if(profile && !profile.other)
+    if(profile && ![profile getUserData])
         return;
     
     if([MesiboInstance isUiThread]) {
@@ -724,11 +707,29 @@
     
 }
 
+-(void) Mesibo_onGroupMembers:(MesiboProfile *) groupProfile members:(NSArray *)members {
+    if(_mNewContactChooser != USERLIST_EDIT_GROUP_MODE)
+        return;
+    
+    [mGroupMembers removeAllObjects];
+    for(int i=0; i < members.count; i++) {
+        MesiboGroupMember *m = members[i];
+        MesiboProfile *u = [m getProfile];
+        [mGroupMembers addObject:u];
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self updateContacts:nil];
+        
+    });
+}
+
 -(void) updateContactsSubTitle :(NSString *)status {
     
     if(status.length ==0) {
         
         mUserStatusLbl.hidden = YES;
+        mUserStatusLbl.text = @"";
         
         [UIView animateWithDuration:0.2 delay:1.0 options: UIViewAnimationOptionCurveEaseIn
                          animations:^{
@@ -779,16 +780,15 @@
     if(_mNewContactChooser == USERLIST_MESSAGE_MODE) {
         mTotalUnreadCount = 0;
         [mUsersList removeAllObjects];
-        //[mProfilesLookup removeAllObjects];
-        
-        /* TBD, need investigation - reloadData was added because after search result, going to messaging view and coming back was reloading the table and since we have emptied mUsersList here, array out of index error was coming in addNewMessage
-         */
         [self.tableView reloadData];
         
         [MesiboInstance addListener:self];
         
         if(mReadSession)
-            [mReadSession stop];
+            [mReadSession endSession];
+        
+        // end all sessions so that they do not send read receipts
+        [MesiboReadSession endAllSessions];
         
         mReadSession = [MesiboReadSession new];
         [mReadSession initSession:nil groupid:0 query:nil delegate:self];
@@ -802,26 +802,21 @@
     }else {
         
         
-        MesiboUserProfile *mp;
+        MesiboProfile *mp;
         NSMutableArray *tempArray = (NSMutableArray *)[MesiboInstance getSortedProfiles];
         mUsersList = [tempArray mutableCopy];
-        //mUsersList = (NSMutableArray *)[MesiboInstance getSortedProfiles];
-        
-        //TBD, if memberList given, we should instead take profile from the list else we wont get profile of member deleted from contacts
         
         if(mUsersList.count > 0) {
             for(int i=(int)(mUsersList.count-1);  i >= 0; i--) {
-                MesiboUserProfile *profile= [mUsersList objectAtIndex:i];
+                MesiboProfile *profile= [mUsersList objectAtIndex:i];
                 
-                profile.flag &= ~MESIBO_USERFLAG_MARKED;
+                [profile setMark:NO];
                 
-                if(profile.groupid == 0  && (nil == profile.address || profile.address.length == 0 ))
+                if([profile getGroupId] == 0  && (nil == [profile getAddress] || [profile getAddress].length == 0 ))
                     [mUsersList removeObject:profile];
                 else if(_mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
-                    if(profile.groupid > 0)
+                    if([profile getGroupId] > 0)
                         [mUsersList removeObject:profile];
-                    //else if([members containsObject:profile.address])
-                    //   profile.flag = profile.flag | MESIBO_USERFLAG_MARKED;
                     
                 }
             }
@@ -829,16 +824,18 @@
         
         
         if(_mNewContactChooser == USERLIST_CONTACTS_MODE && [mMesiboUIOptions.createGroupTitle length] > 0) {
-            mp = [[MesiboUserProfile alloc] init];
-            mp.name = mMesiboUIOptions.createGroupTitle;
-            mp.picturePath =[[MesiboCommonUtils getBundle] pathForResource :[NSString stringWithFormat:@"group"] ofType:@"png"];
-            mp.lookedup = YES;
+            mp = [[MesiboProfile alloc] init];
+            [mp setName:mMesiboUIOptions.createGroupTitle];
+            NSString *imageFile = [[MesiboCommonUtils getBundle] pathForResource :[NSString stringWithFormat:@"group"] ofType:@"png"];
+            [mp setImageFromFile:imageFile];
+            [mp setLookedup:YES];
+
             UserData *od = [[UserData alloc] init];
             od.lastMessage=CREATE_NEW_GROUP_DISCRIPTION;
             [od setUnreadCount:0];
             [od setFixedImage:YES];
             [od setThumbnail:[MesiboImage getDefaultGroupImage]];
-            mp.other = od;
+            [mp setUserData:od];
             mp.status =@"Create a new group?";
             [mUsersList insertObject:mp atIndex:0];
         }
@@ -853,21 +850,20 @@
             
         }
         
-        if(_mGroupMembers && _mGroupMembers.count > 0 && (_mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE)) {
-            for(int i=0; i < _mGroupMembers.count;  i++) {
-                MesiboUserProfile *profile= [_mGroupMembers objectAtIndex:i];
-                profile.flag |= MESIBO_USERFLAG_MARKED;
+        if(mGroupMembers && mGroupMembers.count > 0 && (_mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE)) {
+            for(int i=0; i < mGroupMembers.count;  i++) {
+                MesiboProfile *profile= [mGroupMembers objectAtIndex:i];
+                [profile setMark:YES];
             }
             
             // when we return from createNewGroup, it may again pass the same
-            if(mUtilityArray != _mGroupMembers)
+            if(mUtilityArray != mGroupMembers)
                 [mUtilityArray removeAllObjects];
             
             [mCommonNFilterArray removeAllObjects];
             
-            mUtilityArray = [_mGroupMembers mutableCopy];
+            mUtilityArray = [mGroupMembers mutableCopy];
             mCommonNFilterArray = [mUsersList mutableCopy];
-            
             
         }
         
@@ -876,16 +872,20 @@
     }
 }
 
-
-
 -(IBAction)barButtonBackPressed:(id)sender {
     if(_mNewContactChooser == USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
         for(int i=0;  i< mUsersList.count; i++) {
-            MesiboUserProfile *profile= [mUsersList objectAtIndex:i];
-            profile.flag = profile.flag & (~MESIBO_USERFLAG_MARKED);
+            MesiboProfile *profile= [mUsersList objectAtIndex:i];
+            [profile setMark:NO];
             
         }
     }
+   
+    if(_mNewContactChooser == USERLIST_MESSAGE_MODE && self.parentViewController && !self.parentViewController.navigationController) {
+        [self dismissViewControllerAnimated:YES completion:nil];
+        return;
+    }
+   
     //[self dismissViewControllerAnimated:YES completion:nil];
     [self.navigationController popViewControllerAnimated:YES];
     
@@ -974,7 +974,6 @@
     mIsMessageSearching = NO;
     
     dispatch_async(dispatch_get_main_queue(), ^{
-        //[self.searchController setActive:NO];
         
         [mUtilityArray removeAllObjects];
         [mCommonNFilterArray removeAllObjects];
@@ -985,7 +984,6 @@
         //[_mUsersTableView reloadData];
         
     });
-    //[self.searchController setActive:NO];
     
 }
 
@@ -1009,9 +1007,11 @@
 }
 
 -(void) viewDidAppear:(BOOL)animated {
+    
     [MesiboInstance setAppInForeground:self screenId:0 foreground:YES];
     int b = [MesiboInstance getConnectionStatus];
     [self Mesibo_OnConnectionStatus:b];
+    NSLog(@"viewDidAppear: userviewcontroller: %d", b);
     
 }
 
@@ -1100,7 +1100,7 @@
 }
 
 -(void)onTypingTimer:(NSTimer *)timer {
-    MesiboUserProfile *mp = (MesiboUserProfile *) [timer userInfo];
+    MesiboProfile *mp = (MesiboProfile *) [timer userInfo];
     if(!mp)
         return;
     
@@ -1117,23 +1117,21 @@
 #pragma mark - Table view data source
 
 -(void) updateCell:(UITableViewCell *)cell index:(NSIndexPath *)indexPath {
-    MesiboUserProfile *mp = [self getProfileAtIndexPath:indexPath];
+    MesiboProfile *mp = [self getProfileAtIndexPath:indexPath];
     
     if(!mp) {
         NSLog(@"Nil profile in updateCell");
         return;
     }
-    
-    [MesiboInstance lookupProfile:mp source:1];
-    
+   
     UILabel *pName = (UILabel*)[cell viewWithTag:101];
     
-    NSString *name = mp.name;
-    if(!name) {
-        if(mp.address)
-            name = mp.address;
+    NSString *name = [mp getName];
+    if(!name || !name.length) {
+        if([mp getAddress])
+            name = [mp getAddress];
         else
-            name = [NSString stringWithFormat:@"Group %u", mp.groupid];
+            name = [NSString stringWithFormat:@"Group %u", [mp getGroupId]];
     }
     
     pName.text = name;
@@ -1146,9 +1144,8 @@
     
     UIImage *profileImage = [ud getThumbnail];
     
-    if( nil == profileImage) {
+    if(!profileImage) {
         profileImage = [ud getDefaultImage:mMesiboUIOptions.useLetterTitleImage];
-        
         [ud setThumbnail:profileImage];
     }
     
@@ -1168,9 +1165,9 @@
         UILabel *timeDetails = (UILabel*)[cell viewWithTag:104];
         alertInfo.alpha = 0;
         timeDetails.alpha=0;
-        if(mp.status != nil)
-            pInfo.text = mp.status;
-        messageDetail = mp.status;
+        if([mp getStatus])
+            pInfo.text = [mp getStatus];
+        messageDetail = [mp getStatus];
         
     }else {
         
@@ -1202,28 +1199,18 @@
         
         UILabel *pInfo = (UILabel*)[cell viewWithTag:102];
         
-        NSTimer *timer = [ud getUserListStatusTimer];
-        if(timer) {
-            [timer invalidate];
-            [ud setUserListStatusTimer:nil];
-            timer = nil;
-        }
+        BOOL typing = [ud isTyping];
         
-        uint64_t typingTimeout = [ud getTypingTimeout];
-        
-        if(typingTimeout) {
-            timer = [NSTimer scheduledTimerWithTimeInterval:typingTimeout target: self
-                                                   selector: @selector(onTypingTimer:) userInfo:mp repeats: NO];
-            [ud setUserListStatusTimer:timer];
+        if(typing) {
             [pInfo setTextColor:mTypingColor];
             
             NSString *typingText = STATUS_TYPING;
-            MesiboUserProfile *typingProfile = [ud getTypingProfile];
+            MesiboProfile *typingProfile = [ud getTypingProfile];
             
             if(typingProfile) {
-                NSString *name = typingProfile.name;
+                NSString *name = [typingProfile getName];
                 if(!name)
-                    name = typingProfile.address;
+                    name = [typingProfile getAddress];
                 
                 typingText = [NSString stringWithFormat:@"%@ is %@", name, STATUS_TYPING];
             }
@@ -1244,7 +1231,7 @@
         if(cell.accessoryView == nil) {
             
             UIImageView *accView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 24, 24)];
-            if((mp.flag & MESIBO_USERFLAG_MARKED)) {
+            if([mp isMarked]) {
                 accView.image = [MesiboImage getCheckedImage];
             }else{
                 accView.image = [MesiboImage getUnCheckedImage];
@@ -1255,7 +1242,7 @@
         }else {
             
             UIImageView *accView = (UIImageView *)[cell.accessoryView viewWithTag:33];
-            if((mp.flag & MESIBO_USERFLAG_MARKED)) {
+            if([mp isMarked]) {
                 accView.image = [MesiboImage getCheckedImage];
             }else{
                 accView.image = [MesiboImage getUnCheckedImage];
@@ -1319,13 +1306,6 @@
     else if([text isEqualToString:[self trim:MISSEDVOICECALL_STRING]])
         messageType.image = [MesiboImage getMissedCallIcon:NO];
     
-    /*
-     else if([strText isEqualToString:@"Attachment1"])
-     messageType.image = [MesiboImage imageNamed:@"status_failed"];
-     
-     else if([strText isEqualToString:@"Attachment2"])
-     messageType.image = [MesiboImage imageNamed:@"status_failed"];*/
-    
     if(messageType.image) {
         messageType.bounds = CGRectIntegral( CGRectMake(0, -3, USERLIST_STATUS_ICON_SIZE, USERLIST_STATUS_ICON_SIZE));
     }
@@ -1333,13 +1313,9 @@
     if(statusImage) {
         
         messageStatus.image = statusImage;
-        //float offsetY = 0; //This can be dynamic with respect to size of image and UILabel
         messageStatus.bounds = CGRectIntegral( CGRectMake(0, -3, USERLIST_STATUS_ICON_SIZE, USERLIST_STATUS_ICON_SIZE));
         
     }
-    
-    /* To keep line attached to top (effectively making it two lines)
-     NSString* newString = [NSString stringWithFormat:@"%@\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0                      \u00a0\u00a0\u00a0\u00a0  \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 \u00a0\u00a0\u00a0\u00a0\u00a0 \u00a0\u00a0 \n \u00a0\u00a0\u00a0 \u00a0\u00a0\u00a0\u00a0\u00a0\u00a0 \u00a0\u00a0\u00a0\u00a0\u00a0 \u00a0\u00a0 \u00a0\u00a0\u00a0  \u00a0\u00a0 \u00a0\u00a0\u00a0", strText]; */
     
     NSString* newString = strText;
     
@@ -1379,17 +1355,21 @@
         lbl.attributedText = finalString;
 }
 
--(MesiboUserProfile *) getProfileAtIndexPath:(NSIndexPath *)indexPath {
-    MesiboUserProfile *mp = nil;
+-(MesiboProfile *) getProfileAtIndexPath:(NSIndexPath *)indexPath {
+    MesiboProfile *mp = nil;
     
     @try {
         
         if(_mNewContactChooser == USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE ) {
             
-            if(indexPath.section == 0)
-                mp =[mUtilityArray objectAtIndex:indexPath.row];
-            else
-                mp =[mCommonNFilterArray objectAtIndex:indexPath.row];
+            if(indexPath.section == 0) {
+                if(mUtilityArray.count > indexPath.row)
+                    mp =[mUtilityArray objectAtIndex:indexPath.row];
+            }
+            else {
+                if(mCommonNFilterArray.count > indexPath.row)
+                    mp =[mCommonNFilterArray objectAtIndex:indexPath.row];
+            }
             
             
         } else {
@@ -1399,8 +1379,10 @@
                     mp =[mUtilityArray objectAtIndex:indexPath.row];
                 else
                     mp =[mCommonNFilterArray objectAtIndex:indexPath.row];
-            }else
-                mp =[mUsersList objectAtIndex:indexPath.row];
+            }else {
+                if(mUsersList.count > indexPath.row)
+                    mp =[mUsersList objectAtIndex:indexPath.row];
+            }
             
         }
     } @catch(NSException *e) {
@@ -1415,32 +1397,31 @@
 
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     
-    MesiboUserProfile *mp = [self getProfileAtIndexPath:indexPath];
+    MesiboProfile *mp = [self getProfileAtIndexPath:indexPath];
     
     if(self.mNewContactChooser== USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
         
         UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
         UIImageView *accView = (UIImageView *)[cell.accessoryView viewWithTag:33];
         
-        if((mp.flag & MESIBO_USERFLAG_MARKED)) {
+        if([mp isMarked]) {
             accView.image = [MesiboImage getUnCheckedImage];
-            mp.flag = mp.flag & ~MESIBO_USERFLAG_MARKED;
         }else{
             accView.image = [MesiboImage getCheckedImage];
-            mp.flag = mp.flag | MESIBO_USERFLAG_MARKED;
         }
+        [mp toggleMark];
         
         [_mUsersTableView reloadData];
         return;
     }
     
-    if(mMesiboUIOptions.createGroupTitle && [mp.name isEqualToString:mMesiboUIOptions.createGroupTitle]){
+    if(mMesiboUIOptions.createGroupTitle && [[mp getName] isEqualToString:mMesiboUIOptions.createGroupTitle]){
         [MesiboUIManager launchUserListViewcontroller:self  withChildViewController:[self.storyboard instantiateViewControllerWithIdentifier:@"UserListViewController"] withContactChooser:USERLIST_SELECTION_GROUP withForwardMessageData:nil withMembersList:nil withForwardGroupName:nil withForwardGroupid:0];
         return;
     }
     
     // TBD, don't directly use mp as it may be locally allocated due to bad search implementation
-    mp = [MesiboInstance getProfile:mp.address groupid:mp.groupid];
+    mp = [MesiboInstance getProfile:[mp getAddress] groupid:[mp getGroupId]];
     
     [MesiboUIManager launchMessageViewController:self withUserData:mp uidelegate:_mUiDelegate];
     self.searchController.active = NO;
@@ -1452,7 +1433,7 @@
     
     if(self.mNewContactChooser==USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
         //cv.forwardedMesage = _fwdMessage;
-        MesiboUserProfile *mp;
+        MesiboProfile *mp;
         if ([self isSearching]) {
             mp =[mUtilityArray objectAtIndex:indexPath.row];
             
@@ -1460,7 +1441,7 @@
             mp =[mUsersList objectAtIndex:indexPath.row];
         }
         
-        mp.flag  = mp.flag & (~MESIBO_USERFLAG_MARKED);
+        [mp setMark:NO];
         UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
         UIImageView *accView = (UIImageView *)[cell.accessoryView viewWithTag:33];
         accView.image = [MesiboImage getUnCheckedImage];
@@ -1470,14 +1451,14 @@
     
 }
 
--(void) forwardToContact:(MesiboUserProfile *) profile {
-    profile.flag = profile.flag & ~MESIBO_USERFLAG_MARKED;
+-(void) forwardToContact:(MesiboProfile *) profile {
+    [profile setMark:NO];
     MesiboParams *mesiboParamsUser = (MesiboParams *) [[MesiboParams alloc] init];
     
-    if(profile.groupid)
-        [mesiboParamsUser setGroup:profile.groupid];
+    if([profile getGroupId])
+        [mesiboParamsUser setGroup:[profile getGroupId]];
     else
-        [mesiboParamsUser setPeer:profile.address];
+        [mesiboParamsUser setPeer:[profile getAddress]];
     
     for(NSNumber *msgid in _fwdMessage) {
         [MesiboInstance forwardMessage:mesiboParamsUser msgid:[MesiboInstance random] forwardid:[msgid unsignedLongLongValue]];
@@ -1487,12 +1468,12 @@
 
 -(void) forwardMessageToContacts {
     
-    MesiboUserProfile *profile = nil, *forwardTo = nil;
+    MesiboProfile *profile = nil, *forwardTo = nil;
     int count = 0;
     for(int i=0;  i< mUtilityArray.count; i++) {
         profile= [mUtilityArray objectAtIndex:i];
         
-        if(profile.flag & MESIBO_USERFLAG_MARKED) {
+        if([profile isMarked]) {
             forwardTo = profile;
             [self forwardToContact:profile];
             //NSArray *p = [MesiboInstance getRecentProfiles];
@@ -1503,7 +1484,7 @@
     
     for(int i=0;  i< mCommonNFilterArray.count; i++) {
         profile= [mCommonNFilterArray objectAtIndex:i];
-        if(profile.flag & MESIBO_USERFLAG_MARKED) {
+        if([profile isMarked]) {
             forwardTo = profile;
             [self forwardToContact:profile];
             //NSArray *p = [MesiboInstance getRecentProfiles];
@@ -1517,13 +1498,9 @@
         
         if(count > 1) {
             [self.navigationController popViewControllerAnimated:NO];
-            //[self dismissViewControllerAnimated:NO completion:nil];
             return;
         }
         
-        //[self.parentViewController dismissViewControllerAnimated:NO completion:nil];
-        //[self dismissViewControllerAnimated:YES completion:nil];
-        //[self.navigationController popViewControllerAnimated:NO];
         [MesiboUIManager launchMessageViewController:self withUserData:forwardTo uidelegate:_mUiDelegate];
         
         
@@ -1540,19 +1517,20 @@
     [mSelectedMembers removeAllObjects];
     
     // We must add members from original array because they won't be in mUserList
-    for(int i=0;  i< _mGroupMembers.count; i++) {
-        MesiboUserProfile *profile= [_mGroupMembers objectAtIndex:i];
-        if(profile.flag & MESIBO_USERFLAG_MARKED) {
-            profile.flag = profile.flag & (~MESIBO_USERFLAG_MARKED);
+    for(int i=0;  i< mGroupMembers.count; i++) {
+        MesiboProfile *profile= [mGroupMembers objectAtIndex:i];
+        if([profile isMarked]) {
+            [profile setMark:NO];
             [mSelectedMembers addObject:profile];
+            
         }
     }
     
     
     for(int i=0;  i< mUsersList.count; i++) {
-        MesiboUserProfile *profile= [mUsersList objectAtIndex:i];
-        if(profile.flag & MESIBO_USERFLAG_MARKED) {
-            profile.flag = profile.flag & (~MESIBO_USERFLAG_MARKED);
+        MesiboProfile *profile= [mUsersList objectAtIndex:i];
+        if([profile isMarked]) {
+            [profile setMark:NO];
             [mSelectedMembers addObject:profile];
         }
     }
@@ -1561,7 +1539,8 @@
         [MesiboUIAlerts showDialogue:CREATE_NEW_GROUP_ALERT_MESSAGE withTitle:CREATE_NEW_GROUP_ALERT_TITLE];
         
     } else {
-        [MesiboUIManager launchCreatNewGroupController:self withMemeberProfiles:mSelectedMembers withGroupId:_mForwardGroupid modifygroup:(_mNewContactChooser == USERLIST_EDIT_GROUP_MODE) uidelegate:_mUiDelegate];
+
+        [MesiboUIManager launchCreatNewGroupController:self withMemeberProfiles:mSelectedMembers existingMembers:mGroupMembers  withGroupId:_mForwardGroupid modifygroup:(_mNewContactChooser == USERLIST_EDIT_GROUP_MODE) uidelegate:_mUiDelegate];
         
     }
 }
@@ -1617,25 +1596,26 @@
 -(NSArray *)tableView:(UITableView *)tableView editActionsForRowAtIndexPath:(NSIndexPath *)indexPath {
     UITableViewRowAction *deleteRow = [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDefault title:DELETE_TITLE_STRING handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
         if(_mNewContactChooser != USERLIST_MESSAGE_MODE) {
-            MesiboUserProfile *mp = [mUsersList objectAtIndex:indexPath.row];
+            MesiboProfile *mp = [mUsersList objectAtIndex:indexPath.row];
             [mUsersList removeObjectAtIndex:indexPath.row];
             [_mUsersTableView beginUpdates];
             [_mUsersTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
             [_mUsersTableView endUpdates];
             //[MesiboInstance removeProfile:mp.address groupid:0];
             
-            [MesiboInstance deleteProfile:mp refresh:YES forced:NO];
+
+            //[MesiboInstance deleteProfile:mp refresh:YES forced:NO];
             
         } else {
             
             // Delete  here
-            MesiboUserProfile *mp = [mUsersList objectAtIndex:indexPath.row];
+            MesiboProfile *mp = [mUsersList objectAtIndex:indexPath.row];
             
             [mUsersList removeObjectAtIndex:indexPath.row];
             [_mUsersTableView beginUpdates];
             [_mUsersTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
             [_mUsersTableView endUpdates];
-            [MesiboInstance deleteMessages:mp.address groupid:mp.groupid ts:0];
+            [MesiboInstance deleteMessages:[mp getAddress] groupid:[mp getGroupId] ts:0];
             
         }
         
@@ -1643,27 +1623,10 @@
     
     deleteRow.backgroundColor = [UIColor redColor];
     
-    //disabled for now till we add Archive option
-#if 0
-    UITableViewRowAction *archive = [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDefault title:ARCHIVE_TITLE_STRING handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
-        
-        
-        
-    }];
-    archive.backgroundColor = [UIColor colorWithRed:0.188 green:0.514 blue:0.984 alpha:1];
-    
-    
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
-        return @[deleteRow]; //return @[], we don't want to
-    else
-        return @[deleteRow, archive];
-    
-#else
     if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
         return @[]; // we don't allow deleting contact, TBD, this should be customizable
     else
         return @[deleteRow];
-#endif
     
 }
 

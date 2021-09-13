@@ -86,6 +86,8 @@
 #define NORMAL_TICK_COLOR              0XFFAAAAAA
 #define ERROR_TICK_COLOR               0XFFCC0000
 
+#define CHECKED_COLOR              0XFF00868b
+
 #define ICON_COLOR_MISSEDCALL               0XFFCC0000
 #define ICON_COLOR_DELETED               0XFFAAAAAA
 
@@ -154,6 +156,7 @@
 #define PICKER_ALERT_CANCEL_TITLE @"Cancel"
 
 #define STATUS_TYPING  @"typing..."
+#define STATUS_CHATTING  @"chatting..."
 
 
 

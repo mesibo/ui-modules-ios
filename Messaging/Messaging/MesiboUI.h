@@ -59,6 +59,58 @@
 @optional
 @end
 
+@interface MesiboUiOptions : NSObject
+@property (nonatomic) UIImage *contactPlaceHolder;
+@property (nonatomic) UIImage *messagingBackground;
+
+@property (nonatomic) BOOL useLetterTitleImage;
+
+@property (nonatomic) BOOL enableVoiceCall;
+@property (nonatomic) BOOL enableVideoCall;
+@property (nonatomic) BOOL enableForward;
+@property (nonatomic) BOOL enableSearch;
+@property (nonatomic) BOOL enableBackButton;
+@property (nonatomic) BOOL enableMessageButton;
+
+@property (copy, nonatomic) NSString *messageListTitle;
+@property (copy, nonatomic) NSString *userListTitle;
+@property (copy, nonatomic) NSString *createGroupTitle;
+@property (copy, nonatomic) NSString *selectContactTitle;
+@property (copy, nonatomic) NSString *selectGroupContactsTitle;
+@property (copy, nonatomic) NSString *forwardTitle;
+
+@property (copy, nonatomic) NSString *userOnlineIndicationTitle;
+@property (copy, nonatomic) NSString *onlineIndicationTitle;
+@property (copy, nonatomic) NSString *offlineIndicationTitle;
+@property (copy, nonatomic) NSString *connectingIndicationTitle;
+@property (copy, nonatomic) NSString *noNetworkIndicationTitle;
+@property (copy, nonatomic) NSString *suspendedIndicationTitle;
+
+
+@property (copy, nonatomic) NSString *emptyUserListMessage;
+
+@property (nonatomic) BOOL showRecentInForward;
+@property (nonatomic) BOOL mConvertSmilyToEmoji;
+
+@property (assign, nonatomic) int *mLetterTitleColors;
+@property (assign, nonatomic) int mToolbarColor;
+@property (assign, nonatomic) int mStatusBarColor;
+@property (assign, nonatomic) int mToolbarTextColor;
+@property (assign, nonatomic) int mUserListTypingIndicationColor;
+@property (assign, nonatomic) int mUserListStatusColor;
+@property (assign, nonatomic) int messageBackgroundColorForMe;
+@property (assign, nonatomic) int messageBackgroundColorForPeer;
+@property (assign, nonatomic) int messagingBackgroundColor;
+
+
+@property (assign, nonatomic) uint64_t mMaxImageFileSize;
+@property (assign, nonatomic) uint64_t mMaxVideoFileSize;
+
+@property (assign, nonatomic) BOOL mEnableNotificationBadge;
+
+
+@end
+
 
 @interface MesiboUI : NSObject
 
@@ -69,11 +121,12 @@
 
 +(UIImage *) getDefaultImage:(BOOL) group;
 
-+(void) launchMessageViewController:(UIViewController *) parent profile:(MesiboUserProfile*)profile ;
++(void) launchMessageViewController:(UIViewController *) parent profile:(MesiboProfile*)profile ;
 
-+(void) launchMessageViewController:(UIViewController *) parent profile:(MesiboUserProfile*)profile uidelegate:(id)uidelegate;
++(MesiboUiOptions *) getUiOptions;
++(void) setUiOptions:(MesiboUiOptions *)options;
 
-//+(void) getUITableViewInstance:(UITableViewWithReloadCallback *) table;
++(void) launchMessageViewController:(UIViewController *) parent profile:(MesiboProfile*)profile uidelegate:(id)uidelegate;
 
 @end
 
