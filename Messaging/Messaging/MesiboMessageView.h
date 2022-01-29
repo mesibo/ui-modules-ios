@@ -79,6 +79,7 @@
 -(BOOL) hasImage;
 -(UIImage *) getThumbnail;
 -(UIImage *) getImage;
+-(UIImage *) updateDefaultFileImage;
 -(UIImage *) getCustomImage;
 -(uint32_t) getCustomColor;
 -(uint64_t) getMid;

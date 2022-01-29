@@ -71,7 +71,7 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) enableReverseOrder:(BOOL)enable;
 -(void) insert:(MesiboMessage *) m;
 //-(void) deleteMessages:(NSArray *) msgs type:(int)type;
--(void) deleteMessage:(MesiboMessageView *) msg type:(int)type refresh:(BOOL)refresh;
+-(void) deleteMessage:(MesiboMessageView *)m remote:(BOOL)remote refresh:(BOOL)refresh;
 -(MesiboMessageView *) get:(int)row;
 
 -(void) Mesibo_OnMessageStatus:(MesiboParams *)params;

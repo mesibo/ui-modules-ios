@@ -89,7 +89,6 @@
     NSBundle *ChatBundle;
     BOOL showAttachments;
     BOOL closeMediaPane;
-    BOOL mDeletedGroup;
   
     CGRect contextMenuFrame;
     CGRect chatEditFrame;
@@ -129,8 +128,6 @@
     mPrimaryColor = [UIColor getColor:0xff00868b];
     if(mMesiboUIOptions.mToolbarColor)
         mPrimaryColor = [UIColor getColor:mMesiboUIOptions.mToolbarColor];
-    
-    mDeletedGroup = NO;
     
     // Do any additional setup after loading the view.
 
@@ -350,8 +347,10 @@
     _mReplyView.layer.masksToBounds = YES;
     
     
-    if(mDeletedGroup) {
+    if([_mUser isBlocked] || ([_mUser isGroup] && [_mUser isDeleted])) {
         _mChatView.hidden = YES;
+        //_mCameraBtn.hidden = YES;
+        //_mPaneBtn.hidden = YES;
     }
     
     showAttachments = [MesiboInstance isFileTransferEnabled];
@@ -547,6 +546,13 @@
         if(params.profile) profile = params.profile;
     }
     
+    if([_mUser isGroup] && ![_mUser isActive]) {
+        if([_mUser isDeleted])
+            return [self updateUserStatus:mMesiboUIOPtions.groupDeletedTitle duration:0];
+        else
+            return [self updateUserStatus:mMesiboUIOPtions.groupNotMemberTitle duration:0];
+    }
+    
     if([profile isTypingInGroup:groupid]) {
         [mUserData setTyping:nil];
         status = STATUS_TYPING;
@@ -556,9 +562,9 @@
                 name = [params.profile getAddress];
             status = [NSString stringWithFormat:@"%@ is %@", name, STATUS_TYPING];
         }
-    } else if(groupid && [profile isChatting]) {
-        status = STATUS_TYPING;
-    } else if(groupid && [profile isOnline]) {
+    } else if(!groupid && [profile isChatting]) {
+        status = STATUS_CHATTING;
+    } else if(!groupid && [profile isOnline]) {
         status = mMesiboUIOPtions.userOnlineIndicationTitle;
     }
     
@@ -614,25 +620,25 @@
         [self sendPresence:MESIBO_ACTIVITY_LEFT];
     
     if(mModel) {
-        [mModel stop];
+        [mModel pause];
     }
     
     
 }
 
--(void)screenLock:(NSNotification *)notification {
+-(void)screenUnlock:(NSNotification *)notification {
     [MesiboInstance setAppInForeground:self screenId:1 foreground:YES];
     if(mModel) {
         [mModel start];
     }
 }
 
--(void)screenUnlock:(NSNotification *)notification {
+-(void)screenLock:(NSNotification *)notification {
     if(![_mUser getGroupId])
         [self sendPresence:MESIBO_ACTIVITY_LEFT];
     
     if(mModel) {
-        [mModel stop];
+        [mModel pause];
     }
 }
 
@@ -665,8 +671,8 @@
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
     
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenLock:) name:UIApplicationProtectedDataDidBecomeAvailable object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenUnlock:) name:UIApplicationProtectedDataWillBecomeUnavailable object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenUnlock:) name:UIApplicationProtectedDataDidBecomeAvailable object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(screenLock:) name:UIApplicationProtectedDataWillBecomeUnavailable object:nil];
     
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]
                                    initWithTarget:self
@@ -1466,6 +1472,12 @@
 
 - (void) onProfileUpdate {
     [self setProfilePicture];
+    
+    if([_mUser isBlocked] || ([_mUser isGroup] && ![_mUser isActive])) {
+        _mChatView.hidden = YES;
+    } else {
+        _mChatView.hidden = NO;
+    }
 }
 
 - (void) onShutdown {

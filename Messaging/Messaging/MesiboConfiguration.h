@@ -156,7 +156,7 @@
 #define PICKER_ALERT_CANCEL_TITLE @"Cancel"
 
 #define STATUS_TYPING  @"typing..."
-#define STATUS_CHATTING  @"chatting..."
+#define STATUS_CHATTING  @"joined"
 
 
 
@@ -194,6 +194,8 @@
 #define MISSEDVIDEOCALL_STRING @" Missed video call"
 #define MESSAGEDELETED_STRING @" This message was deleted"
 
+#define DELETE_ALERT_TITLE  @"Delete Messages"
+#define DELETE_ALERT_MESSAGES  @"Delete chat with %@"
 
 #define FORWARD_ALERT_TITLE  @"Forwarding"
 #define FORWARD_ALERT_MESSAGE @"Select users from the list."

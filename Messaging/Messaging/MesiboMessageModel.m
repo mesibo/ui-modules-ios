@@ -120,11 +120,20 @@
         [mReadSession enableSummary:YES];
     }
     
+    [mReadSession start];
+    
 }
 
 -(void) start {
     [self updateConnectionStatus];
     [MesiboInstance addListener:self];
+    if(mReadSession)
+        [mReadSession enableReadReceipt:YES];
+}
+
+-(void) pause {
+    if(mReadSession)
+        [mReadSession enableReadReceipt:NO];
 }
 
 -(void) stop {
@@ -485,10 +494,10 @@
     [mList removeObject:m];
 }
 
--(void) deleteMessage:(MesiboMessageView *)m type:(int)type refresh:(BOOL)refresh {
+-(void) deleteMessage:(MesiboMessageView *)m remote:(BOOL)remote refresh:(BOOL)refresh {
     if(MESSAGEVIEW_TIMESTAMP == [m getType]) return;
     
-    if(type != MESIBO_DELETE_RECALL) {
+    if(!remote) {
         // instead of this we can just mark object as deleted so that
         // we can make height zero
         if(mEnableTimestamp)
@@ -615,7 +624,10 @@
         return;
     }
     
-    [mDelegate onPresence:MESIBO_ACTIVITY_NONE];
+    if(MESIBO_STATUS_ONLINE == status)
+        [mDelegate onPresence:MESIBO_ACTIVITY_ONLINE];
+    else
+        [mDelegate onPresence:MESIBO_ACTIVITY_NONE];
 }
 
 -(void) Mesibo_onActivity:(MesiboParams *)params activity:(int)activity {

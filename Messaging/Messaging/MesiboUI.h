@@ -86,6 +86,9 @@
 @property (copy, nonatomic) NSString *noNetworkIndicationTitle;
 @property (copy, nonatomic) NSString *suspendedIndicationTitle;
 
+@property (copy, nonatomic) NSString *groupDeletedTitle;
+@property (copy, nonatomic) NSString *groupNotMemberTitle;
+
 
 @property (copy, nonatomic) NSString *emptyUserListMessage;
 

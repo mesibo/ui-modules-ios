@@ -91,6 +91,17 @@
     mGroupMembers = members;
 }
 
+-(NSString*)titleAddSpace:(NSString*)title {
+    int len = (int) title.length;
+    if(len >= 16) return title;
+    
+    int spaceCount = ((16-len)/2) + 1;
+    
+    NSString *result = [NSString stringWithFormat:@".%@%@%@.",[@" " stringByPaddingToLength:spaceCount withString:@" " startingAtIndex:0], title, [@" " stringByPaddingToLength:spaceCount withString:@" " startingAtIndex:0]];
+    return result;
+}
+
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     
@@ -197,35 +208,41 @@
             
         }
         
-        UIFont *titleFont = [UIFont boldSystemFontOfSize:NAVBAR_TITLE_FONT_SIZE];;
-        CGSize size = [mMesiboUIOptions.messageListTitle sizeWithAttributes:@{NSFontAttributeName: titleFont}];
+        UIFont *titleFont = [UIFont boldSystemFontOfSize:NAVBAR_TITLE_FONT_SIZE];
+        
+        NSString *title = [self getAppTitle];
+        
+        CGSize size = [title sizeWithAttributes:@{NSFontAttributeName: titleFont}];
         
         CGSize titleSize = CGSizeMake(ceilf(size.width), ceilf(size.height));
-        
-        UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, NAVBAR_TITLEVIEW_WIDTH, 0)];
+        UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, NAVBAR_TITLEVIEW_WIDTH, titleSize.height)];
         titleLabel.backgroundColor = [UIColor clearColor];
         titleLabel.textColor = [UIColor getColor:NAVIGATION_TITLE_COLOR];
         titleLabel.textAlignment = NSTextAlignmentCenter;
         titleLabel.font = titleFont;
-        titleLabel.text = mMesiboUIOptions.messageListTitle;
+        titleLabel.text = title;
         titleLabel.tag = 21;
         
-        [titleLabel sizeToFit];
+        //[titleLabel sizeToFit];
         
         UIFont *subtitleFont = [UIFont systemFontOfSize:NAVBAR_SUBTITLE_FONT_SIZE];
         size = [@"Connecting" sizeWithAttributes:@{NSFontAttributeName: subtitleFont}];
         CGSize subtitleSize = CGSizeMake(ceilf(size.width), ceilf(size.height));
         
-        UILabel *subTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, titleSize.height, NAVBAR_TITLEVIEW_WIDTH, 0)];
+        UILabel *subTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, titleSize.height, NAVBAR_TITLEVIEW_WIDTH, subtitleSize.height)];
         subTitleLabel.backgroundColor = [UIColor clearColor];
         subTitleLabel.textColor = [UIColor getColor:NAVIGATION_TITLE_COLOR];
         subTitleLabel.font = [UIFont systemFontOfSize:NAVBAR_SUBTITLE_FONT_SIZE];
         subTitleLabel.text = @". . . . .  . . . . . . . . ";
         subTitleLabel.textAlignment = NSTextAlignmentCenter;
         subTitleLabel.tag = 20;
-        [subTitleLabel sizeToFit];
+        //[subTitleLabel sizeToFit];
         
-        UIView *twoLineTitleView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, MAX(subTitleLabel.frame.size.width, titleLabel.frame.size.width), titleSize.height + subtitleSize.height)];
+        CGFloat vw = MAX(subTitleLabel.frame.size.width, titleLabel.frame.size.width);
+        //if(vw < NAVBAR_TITLEVIEW_WIDTH) vw = NAVBAR_TITLEVIEW_WIDTH;
+        
+        
+        UIView *twoLineTitleView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, vw, titleSize.height + subtitleSize.height)];
         [twoLineTitleView addSubview:titleLabel];
         [twoLineTitleView addSubview:subTitleLabel];
         
@@ -245,7 +262,11 @@
         
         mUserStatusLbl = subTitleLabel;
         mUserNameLbl = titleLabel;
-        mUserStatusLbl.text = mMesiboUIOptions.connectingIndicationTitle;
+        int status = [MesiboInstance getConnectionStatus];
+        if(status == MESIBO_STATUS_ONLINE)
+            mUserStatusLbl.text = @"";
+        else
+            mUserStatusLbl.text = mMesiboUIOptions.connectingIndicationTitle;
         
         mShowUserStatusFrm = mUserNameLbl.frame;
         CGRect frame = mShowUserStatusFrm;
@@ -266,7 +287,7 @@
     self.searchController.searchBar.delegate = self;
     
     self.searchController.searchResultsUpdater = self;
-    self.searchController.searchBar.placeholder = nil;
+    self.searchController.searchBar.placeholder = NSLocalizedString(@"Search", comment: "");
     self.searchController.searchBar.frame = CGRectMake(self.searchController.searchBar.frame.origin.x,
                                                        self.searchController.searchBar.frame.origin.y,
                                                        self.searchController.searchBar.frame.size.width, 44.0);
@@ -292,12 +313,23 @@
         self.extendedLayoutIncludesOpaqueBars = YES;
     }
     
+}
+
+-(NSString *) getAppTitle {
+    NSString *appTitle = mMesiboUIOptions.messageListTitle;
+    if(!appTitle || !appTitle.length) appTitle = [MesiboInstance getAppName];
+    return appTitle;;
+}
+
+-(void) setNavigationTitle:(NSString *) title subtitle:(NSString *) subtitle {
     
 }
 
 - (void) updateTitles: (int) mode {
-    if(mode == USERLIST_MESSAGE_MODE)
-        self.title = mMesiboUIOptions.messageListTitle ;
+    if(mode == USERLIST_MESSAGE_MODE) {
+        
+        self.title = [self getAppTitle] ;
+    }
     else if(mode == USERLIST_CONTACTS_MODE)
         self.title = mMesiboUIOptions.selectContactTitle ;
     else if(mode == USERLIST_FORWARD_MODE)
@@ -611,6 +643,10 @@
     //NSLog(@"OnConnectionStatus status: %d", status);
     
     if(status == MESIBO_STATUS_ONLINE) {
+        NSString *title = [self getAppTitle];
+        self.title = title ;
+        mUserNameLbl.text = title;
+        
         [self updateContactsSubTitle:mMesiboUIOptions.onlineIndicationTitle];
     } else if(status == MESIBO_STATUS_CONNECTING) {
         [self updateContactsSubTitle:mMesiboUIOptions.connectingIndicationTitle];
@@ -726,31 +762,31 @@
 
 -(void) updateContactsSubTitle :(NSString *)status {
     
-    if(status.length ==0) {
+    if(status.length == 0) {
         
         mUserStatusLbl.hidden = YES;
         mUserStatusLbl.text = @"";
         
-        [UIView animateWithDuration:0.2 delay:1.0 options: UIViewAnimationOptionCurveEaseIn
+        [UIView animateWithDuration:0.2 delay:0.0 options: UIViewAnimationOptionCurveEaseIn
                          animations:^{
-                             mUserNameLbl.frame = mHideUserStatusFrm;
-                         }
+            mUserNameLbl.frame = mHideUserStatusFrm;
+        }
                          completion:^(BOOL finished){
-                         }];
+        }];
         
     }else {
         
         mUserStatusLbl.hidden = NO;
         [UIView animateWithDuration:0.2 delay:0.0 options: UIViewAnimationOptionCurveEaseOut
                          animations:^{
-                             mUserNameLbl.frame = mShowUserStatusFrm;
-                         }
+            mUserNameLbl.frame = mShowUserStatusFrm;
+        }
                          completion:^(BOOL finished){
-                             
-                             mUserStatusLbl.hidden = NO;
-                             mUserStatusLbl.text = status;
-                             
-                         }];
+            
+            mUserStatusLbl.hidden = NO;
+            mUserStatusLbl.text = status;
+            
+        }];
         
     }
 }
@@ -970,21 +1006,24 @@
 
 - (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar {
     
-    
     mIsMessageSearching = NO;
     
-    dispatch_async(dispatch_get_main_queue(), ^{
-        
-        [mUtilityArray removeAllObjects];
-        [mCommonNFilterArray removeAllObjects];
-        if(mMesiboUIOptions.showRecentInForward)
-            mUtilityArray = [[MesiboInstance getRecentProfiles] mutableCopy];
-        mCommonNFilterArray = [mUsersList mutableCopy];
-        [self refreshTable];
-        //[_mUsersTableView reloadData];
-        
-    });
     
+    [self.searchController setActive:NO];
+    
+    [mUtilityArray removeAllObjects];
+    [mCommonNFilterArray removeAllObjects];
+    if(mMesiboUIOptions.showRecentInForward)
+        mUtilityArray = [[MesiboInstance getRecentProfiles] mutableCopy];
+    mCommonNFilterArray = [mUsersList mutableCopy];
+    
+    [self refreshTable];
+    //[self.searchController setActive:NO];
+    
+}
+
+-(void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
+    // we are already seraching as user types, so search button is redundant
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -1539,10 +1578,34 @@
         [MesiboUIAlerts showDialogue:CREATE_NEW_GROUP_ALERT_MESSAGE withTitle:CREATE_NEW_GROUP_ALERT_TITLE];
         
     } else {
-
+        
         [MesiboUIManager launchCreatNewGroupController:self withMemeberProfiles:mSelectedMembers existingMembers:mGroupMembers  withGroupId:_mForwardGroupid modifygroup:(_mNewContactChooser == USERLIST_EDIT_GROUP_MODE) uidelegate:_mUiDelegate];
         
     }
+}
+
+-(void) deleteConversation:(MesiboProfile *)mp indexPath:(NSIndexPath *)indexPath {
+    
+    if(_mNewContactChooser != USERLIST_MESSAGE_MODE) {
+        [mUsersList removeObjectAtIndex:indexPath.row];
+        [_mUsersTableView beginUpdates];
+        [_mUsersTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
+        [_mUsersTableView endUpdates];
+        
+    } else {
+        
+        // Delete  here
+        [mUsersList removeObjectAtIndex:indexPath.row];
+        if(mUsersList.count > 0) {
+            [_mUsersTableView beginUpdates];
+            [_mUsersTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
+            [_mUsersTableView endUpdates];
+        } else {
+            [_mUsersTableView reloadData];
+        }
+        [MesiboInstance deleteMessages:[mp getAddress] groupid:[mp getGroupId] ts:0];
+    }
+    
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
@@ -1594,30 +1657,25 @@
 
 
 -(NSArray *)tableView:(UITableView *)tableView editActionsForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    __weak __typeof(self) weakSelf = self;
     UITableViewRowAction *deleteRow = [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDefault title:DELETE_TITLE_STRING handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
-        if(_mNewContactChooser != USERLIST_MESSAGE_MODE) {
-            MesiboProfile *mp = [mUsersList objectAtIndex:indexPath.row];
-            [mUsersList removeObjectAtIndex:indexPath.row];
-            [_mUsersTableView beginUpdates];
-            [_mUsersTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
-            [_mUsersTableView endUpdates];
-            //[MesiboInstance removeProfile:mp.address groupid:0];
+        __typeof(self) strongSelf = weakSelf;
+        MesiboProfile *mp = [mUsersList objectAtIndex:indexPath.row];
+        NSString *prompt = [NSString stringWithFormat:DELETE_ALERT_MESSAGES, [mp getNameOrAddress:@"+"]];
+        
+        [MesiboUIAlerts showPrompt:prompt withTitle:DELETE_ALERT_TITLE actionTitle:DELETE_TITLE_STRING alertStyle:NO completion:^(BOOL result) {
+            if(!result) return;
             
-
-            //[MesiboInstance deleteProfile:mp refresh:YES forced:NO];
+            // if new messages received, row may have changed, don't delete in that case
+            MesiboProfile *updatedMp = [mUsersList objectAtIndex:indexPath.row];
+            if(updatedMp != mp) return;
             
-        } else {
-            
-            // Delete  here
-            MesiboProfile *mp = [mUsersList objectAtIndex:indexPath.row];
-            
-            [mUsersList removeObjectAtIndex:indexPath.row];
-            [_mUsersTableView beginUpdates];
-            [_mUsersTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
-            [_mUsersTableView endUpdates];
-            [MesiboInstance deleteMessages:[mp getAddress] groupid:[mp getGroupId] ts:0];
-            
-        }
+            [strongSelf deleteConversation:mp indexPath:indexPath];
+            return;
+        }];
+        
+        return;
         
     }];
     

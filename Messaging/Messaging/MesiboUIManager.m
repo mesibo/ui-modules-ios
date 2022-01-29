@@ -64,7 +64,7 @@
     return;
 }
 
-+(void) launchMessageViewController:(UIViewController *) parent withUserData : (MesiboUserProfile*) userProfile uidelegate:(id)uidelegate {
++(void) launchMessageViewController:(UIViewController *) parent withUserData : (MesiboProfile*) userProfile uidelegate:(id)uidelegate {
     
     if(!parent)
         return;

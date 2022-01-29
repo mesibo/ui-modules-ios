@@ -373,10 +373,11 @@
     [mList removeObject:m];
 }
 
--(void) deleteMessage:(MesiboMessageView *)m type:(int)type refresh:(BOOL)refresh {
+-(void) deleteMessage:(MesiboMessageView *)m remote:(BOOL)remote refresh:(BOOL)refresh {
+
     if(MESSAGEVIEW_TIMESTAMP == [m getType]) return;
     
-    if(type != MESIBO_DELETE_RECALL) {
+    if(!remote) {
         // instead of this we can just mark object as deleted so that
         // we can make height zero
         if(mEnableTimestamp)

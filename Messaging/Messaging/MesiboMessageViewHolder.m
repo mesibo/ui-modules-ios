@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2021 Mesibo
  * https://mesibo.com
  * All rights reserved.
  *
@@ -500,9 +500,17 @@
     if([_message hasMedia] && _message.media.location)
         picView_h = ((float)picView_w  * 2 )/ 3;
     
+    UIImage *img = [_uiData getThumbnail];
+    if(!img) img = [_uiData getImage];
+    if(!img) {
+        img = [_uiData updateDefaultFileImage];
+        picView_w /= 2;
+        picView_h /= 2;
+    }
+    
     _chatPicture.frame = CGRectMake(picView_x, picView_y, picView_w, picView_h);
     
-    _chatPicture.image = [_uiData getThumbnail];
+    _chatPicture.image = img;
     
     if([_message hasMedia] && (_message.media.location || [_message.media.file isTransferred])) {
         _mDownloadProgressView.hidden = YES;

@@ -65,7 +65,6 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) setup:(id)parent tableView:(UITableView *)tableView model:(MesiboMessageModel *)model delegate:(id)delegate uidelegate:(id)uidelegate;
 
 -(void) insert:(MesiboMessage *) m;
-//-(void) deleteMessages:(NSArray *) msgs type:(int)type;
 //-(id) get:(int)row;
 
 //-(void) setPeer:(NSString *)peer groupid:(uint32_t)groupid query:(NSString *)query;

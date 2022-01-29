@@ -162,6 +162,8 @@
     }
     
     NSString *msg = [_mMessage getMessageAsString];
+    if(_mMessage.media.file)
+        msg = _mMessage.media.file.message;
     
     [self setMissedCallInfo];
     
@@ -202,6 +204,13 @@
     }
     
     return nil;
+}
+
+-(UIImage *) updateDefaultFileImage {
+    if(_mMessage.media.file) {
+        _mMessage.media.file.image = [MesiboImage getFileTypeImage:[_mMessage.media.file getPath]];
+    }
+    return _mMessage.media.file.image;
 }
 
 -(UIImage *) getImage {

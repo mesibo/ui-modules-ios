@@ -72,6 +72,7 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) setDestination:(MesiboParams *)params ;
 -(BOOL) loadMessages:(int)count;
 -(void) start;
+-(void) pause;
 -(void) stop;
 -(void) updateConnectionStatus;
 -(void) enableTimestamp:(BOOL)enable;
@@ -82,7 +83,7 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) insert:(MesiboMessage *) m;
 -(void) setMessageStatus:(uint64_t)msgid status:(int)status;
 //-(void) deleteMessages:(NSArray *) msgs type:(int)type;
--(void) deleteMessage:(MesiboMessageView *) msg type:(int)type refresh:(BOOL)refresh;
+-(void) deleteMessage:(MesiboMessageView *)m remote:(BOOL)remote refresh:(BOOL)refresh;
 -(void) deleteMessage:(uint64_t)msgid refresh:(BOOL)refresh;
 -(MesiboMessageView *) get:(int)row;
 -(NSInteger) count;

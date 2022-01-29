@@ -563,28 +563,31 @@
     [mTable reloadData];
 }
 
--(void) deleteSelectedMessages:(int)type {
-    if(type < 0) {
-        [self cancelSelectionMode];
-        return;
-    }
-    
+-(void) deleteSelectedMessages:(BOOL) remote {
     uint64_t ids[32];
     int count = 0;
     for (id key in mSelectedMessages) {
         MesiboMessageView *m = [mSelectedMessages objectForKey:key];
         ids[count++] = [m getMid];
         
-        [mModel deleteMessage:m type:type refresh:NO];
+        [mModel deleteMessage:m remote:remote refresh:NO];
         
         if(count == 32) {
-            [MesiboInstance deleteMessages:ids count:count deleteType:type];
+            if(remote) {
+                [MesiboInstance wipeAndRecallMessages:ids count:count];
+            } else {
+                [MesiboInstance deleteMessages:ids count:count];
+            }
             count = 0;
         }
     }
     
     if(count > 0) {
-        [MesiboInstance deleteMessages:ids count:count deleteType:type];
+        if(remote) {
+            [MesiboInstance wipeAndRecallMessages:ids count:count];
+        } else {
+            [MesiboInstance deleteMessages:ids count:count];
+        }
     }
     
     [self cancelSelectionMode];
@@ -594,15 +597,17 @@
 }
 
 -(UIAlertAction *) addDeleteAlert:(UIAlertController *)view title:(NSString *)title type:(int) type {
-    return [UIAlertAction
-            actionWithTitle:title
-            style:UIAlertActionStyleDefault
-            handler:^(UIAlertAction * action)
-            {
-                [self deleteSelectedMessages:type];
-                //Do some thing here
-                [view dismissViewControllerAnimated:YES completion:nil];
-            }];
+    return [UIAlertAction actionWithTitle:title style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
+                
+        if(type >= 0)
+            [self deleteSelectedMessages:(type >0)];
+        else
+            [self cancelSelectionMode];
+            
+        
+        //Do some thing here
+        [view dismissViewControllerAnimated:YES completion:nil];
+    }];
 }
 
 -(void) promptAnddeleteMessage {
@@ -611,8 +616,8 @@
                                  message:nil
                                  preferredStyle:UIAlertControllerStyleActionSheet];
     
-    UIAlertAction* forall = [self addDeleteAlert:view title:@"Delete For Everyone" type:MESIBO_DELETE_RECALL];
-    UIAlertAction* forme = [self addDeleteAlert:view title:@"Delete For Me" type:MESIBO_DELETE_LOCAL];
+    UIAlertAction* forall = [self addDeleteAlert:view title:@"Delete For Everyone" type:1];
+    UIAlertAction* forme = [self addDeleteAlert:view title:@"Delete For Me" type:0];
     
     UIAlertAction* cancel = [self addDeleteAlert:view title:PICKER_ALERT_CANCEL_TITLE type:-1];
     
@@ -627,7 +632,7 @@
     
     if(SELECTION_DELETE == mSelectionMode) {
         
-        int maxInterval = [MesiboInstance deletePolicy:-1 deleteType:-1];
+        int maxInterval = [MesiboInstance getMessageRetractionInterval];
         BOOL deleteForAll = YES;
         //TBD, we just need to check oldest message, not all
         for (id key in mSelectedMessages) {
@@ -636,7 +641,7 @@
             
             uint64_t elapsed = (([MesiboInstance getTimestamp] - mm.ts)/1000);
             
-            if(![mm isOutgoing] || [mm isFailed] || elapsed > maxInterval) {
+            if(![mm isOutgoing] || [mm isFailed] || [mm isDeleted] || elapsed > maxInterval) {
                 deleteForAll = NO;
                 break;
             }
@@ -648,7 +653,7 @@
             return;
         }
         
-        [self deleteSelectedMessages:MESIBO_DELETE_LOCAL];
+        [self deleteSelectedMessages:NO];
         
         //uint64_t mmid = [self.mMessageList removeMessageFromMessageData:indexPath];
         //int rv = [MesiboInstance deleteMessage:mmid];

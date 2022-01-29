@@ -218,7 +218,8 @@
     if(!members.count) return;
     
     MesiboGroupProfile *gp = [mProfile getGroupProfile];
-    [gp addMembers:members permissions:MESIBO_MEMBERFLAG_ALL adminPermissions:0];
+    MesiboMemberPermissions *mp = [MesiboMemberPermissions new];
+    [gp addMembers:members permissions:mp];
 }
 
 -(void) setGroup:(MesiboProfile *) profile {
