@@ -246,6 +246,7 @@
         [twoLineTitleView addSubview:titleLabel];
         [twoLineTitleView addSubview:subTitleLabel];
         
+#if 0
         float widthDiff = subTitleLabel.frame.size.width - titleLabel.frame.size.width;
         
         if (widthDiff > 0) {
@@ -257,7 +258,7 @@
             frame.origin.x = abs((int)(widthDiff) / 2);
             subTitleLabel.frame = CGRectIntegral(frame);
         }
-        
+#endif
         self.navigationItem.titleView = twoLineTitleView;
         
         mUserStatusLbl = subTitleLabel;
@@ -292,6 +293,9 @@
                                                        self.searchController.searchBar.frame.origin.y,
                                                        self.searchController.searchBar.frame.size.width, 44.0);
     
+    
+    [self.searchController.searchBar setBackgroundImage:[UIImage new]];
+    [self.searchController.searchBar setTranslucent:YES];
     BOOL enableSearch = mMesiboUIOptions.enableSearch;
     
     if(USERLIST_FORWARD_MODE == _mNewContactChooser || USERLIST_EDIT_GROUP_MODE == _mNewContactChooser)
@@ -483,7 +487,7 @@
         }
     }
     
-    mTotalUnreadCount += [oud getUnreadCount];
+    mTotalUnreadCount = [oud getUnreadCount];
     
     if(MESIBO_ORIGIN_REALTIME == params.origin) {
         [self updateNotificationBadge];
@@ -641,6 +645,7 @@
 
 -(void) Mesibo_OnConnectionStatus:(int)status {
     //NSLog(@"OnConnectionStatus status: %d", status);
+    status = [MesiboInstance getConnectionStatus];
     
     if(status == MESIBO_STATUS_ONLINE) {
         NSString *title = [self getAppTitle];
@@ -1303,6 +1308,9 @@
         
     }
     
+    UIColor *altCellColor = [UIColor whiteColor];
+        cell.backgroundColor = altCellColor;
+    
     [self updateCell:cell index:indexPath];
     
     return cell;
@@ -1634,10 +1642,10 @@
     if ([self isSearching])
         messageLabel.text = SEARCH_IS_NOT_AVAILABLE;
     
-    messageLabel.textColor = [UIColor getColor:EMPTY_USERLIST_MESAGE_FONT_COLOR];
+    messageLabel.textColor = [UIColor getColor:mMesiboUIOptions.emptyUserListMessageColor];
     messageLabel.numberOfLines = 0;
     messageLabel.textAlignment = NSTextAlignmentCenter;
-    messageLabel.font = [UIFont fontWithName:EMPTY_USERLIST_MESAGE_FONT_NAME size:EMPTY_USERLIST_MESAGE_FONT_SIZE];
+    messageLabel.font = mMesiboUIOptions.emptyUserListMessageFont;
     [messageLabel sizeToFit];
     
     self.tableView.backgroundView = messageLabel;

@@ -1148,8 +1148,14 @@
     if(MESSAGEVIEW_MESSAGE != [_uiData getType])
         return NO;
     
-    BOOL ret = (action == @selector(copy:) || action == @selector(delete:) || action == @selector(forward:) || action == @selector(share:) || action == @selector(favorite:) || action == @selector(reply:)) ;
+    BOOL ret = (action == @selector(copy:) || action == @selector(delete:) ||
+                action == @selector(share:) || action == @selector(favorite:))  ;
     if(ret) return YES;
+    
+    if(action == @selector(forward:) || action == @selector(reply:)) {
+        if([_message isFailed]) return NO;
+        return YES;
+    }
     
     if([_message isFailed]) {
         return (action == @selector(resend:));

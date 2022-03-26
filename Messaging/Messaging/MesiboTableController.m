@@ -398,7 +398,8 @@
 
 - (BOOL) tableView:(UITableView *)tableView canPerformAction:(SEL)action forRowAtIndexPath:(NSIndexPath *)indexPath withSender:(nullable id)sender {
     
-    if (action == @selector(delete:) || action == @selector(copy:) || action == @selector(resend:) || action == @selector(forward:) || action == @selector(share:)){
+    if (action == @selector(delete:) || action == @selector(copy:) || action == @selector(resend:)
+        || action == @selector(forward:) || action == @selector(share:)){
         return YES;
     }
     

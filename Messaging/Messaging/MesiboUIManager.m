@@ -75,6 +75,11 @@
         cv.mUser = userProfile ;
         [cv setTableViewDelegate:uidelegate];
         
+        MesiboUiOptions *options = [MesiboUI getUiOptions];
+        
+        if(options.hidesBottomBarWhenPushed)
+            cv.hidesBottomBarWhenPushed = YES;
+        
         if(parent.navigationController)
             [parent.navigationController pushViewController:cv animated:YES];
         else

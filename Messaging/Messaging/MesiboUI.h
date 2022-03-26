@@ -68,9 +68,12 @@
 @property (nonatomic) BOOL enableVoiceCall;
 @property (nonatomic) BOOL enableVideoCall;
 @property (nonatomic) BOOL enableForward;
+@property (nonatomic) BOOL enableReply;
 @property (nonatomic) BOOL enableSearch;
 @property (nonatomic) BOOL enableBackButton;
 @property (nonatomic) BOOL enableMessageButton;
+@property (nonatomic) BOOL hidesBottomBarWhenPushed;
+
 
 @property (copy, nonatomic) NSString *messageListTitle;
 @property (copy, nonatomic) NSString *userListTitle;
@@ -91,6 +94,8 @@
 
 
 @property (copy, nonatomic) NSString *emptyUserListMessage;
+@property (copy, nonatomic) UIFont *emptyUserListMessageFont;
+@property (assign, nonatomic) int emptyUserListMessageColor;
 
 @property (nonatomic) BOOL showRecentInForward;
 @property (nonatomic) BOOL mConvertSmilyToEmoji;
@@ -104,6 +109,11 @@
 @property (assign, nonatomic) int messageBackgroundColorForMe;
 @property (assign, nonatomic) int messageBackgroundColorForPeer;
 @property (assign, nonatomic) int messagingBackgroundColor;
+
+@property (assign, nonatomic) int mediaButtonPosition;
+@property (assign, nonatomic) int locationButtonPosition;
+@property (assign, nonatomic) int docButtonPosition;
+@property (assign, nonatomic) int audioButtonPosition;
 
 
 @property (assign, nonatomic) uint64_t mMaxImageFileSize;

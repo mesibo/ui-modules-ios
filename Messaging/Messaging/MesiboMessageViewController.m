@@ -95,7 +95,6 @@
     UIView *mReplyTextView;
     UIImage *mReplyImageThumb;
     NSString *mReplyUsernameStorage;
-    MesiboUiOptions *mMesiboUIOPtions;
     UIButton *mProfileThumbnail;
     UserData *mUserData;
     MesiboUiOptions *mMesiboUIOptions;
@@ -142,7 +141,7 @@
         
     }
     
-    mMesiboUIOPtions = [MesiboUI getUiOptions];
+    mMesiboUIOptions = [MesiboUI getUiOptions];
     
     ChatBundle = [[NSBundle alloc] initWithURL:bundleURL];
     
@@ -258,11 +257,16 @@
     titleLabel.backgroundColor = [UIColor clearColor];
     titleLabel.textColor = [UIColor getColor:NAVIGATION_TITLE_COLOR];
     titleLabel.font = titleFont;
-    titleLabel.text = username;
+    titleLabel.text = @"Mesibo User Name For Size";
+    titleLabel.numberOfLines = 1;
+    
     titleLabel.textAlignment = NSTextAlignmentLeft;
     titleLabel.tag = 21;
+    titleLabel.lineBreakMode = NSLineBreakByTruncatingTail;
+    //titleLabel.lineBreakMode = NSLineBreakByClipping;
     
     [titleLabel sizeToFit];
+    titleLabel.text = username;
     
     UIFont *subtitleFont = [UIFont systemFontOfSize:NAVBAR_SUBTITLE_FONT_SIZE];
     size = [username sizeWithAttributes:@{NSFontAttributeName: subtitleFont}];
@@ -295,7 +299,7 @@
     // to set ellipsis glyph in the status (useful for group status which is long)
     mUserStatusLabel.lineBreakMode = NSLineBreakByTruncatingTail;
     
-    mUserStatusLabel.text = mMesiboUIOPtions.connectingIndicationTitle;
+    mUserStatusLabel.text = mMesiboUIOptions.connectingIndicationTitle;
     
     showUserStatusFrame = mUserNameLabel.frame;
     CGRect frame = showUserStatusFrame;
@@ -317,13 +321,22 @@
     UIMenuItem *favoriteMenuItem = [[UIMenuItem alloc] initWithTitle:MENU_FAVORITE_TITLE action:@selector(favorite:)];
     UIMenuItem *replyMenuItem = [[UIMenuItem alloc] initWithTitle:MENU_REPLY_TITLE action:@selector(reply:)];
     
-    if(mMesiboUIOPtions.enableForward) {
-        [[UIMenuController sharedMenuController] setMenuItems: @[replyMenuItem,resendMenuItem,forwardMenuItem,shareMenuItem,favoriteMenuItem]];
-    }else {
-        [[UIMenuController sharedMenuController] setMenuItems: @[replyMenuItem,resendMenuItem,shareMenuItem,favoriteMenuItem]];
-        
+    NSMutableArray<UIMenuItem *> *context_menu = [NSMutableArray new];
+    if(mMesiboUIOptions.enableReply) {
+        [context_menu addObject:replyMenuItem];
     }
+    
+    [context_menu addObject:resendMenuItem];
+    
+    if(mMesiboUIOptions.enableForward) {
+        [context_menu addObject:forwardMenuItem];
+    }
+    
+    [context_menu addObject:shareMenuItem];
+    [context_menu addObject:favoriteMenuItem];
+    [[UIMenuController sharedMenuController] setMenuItems:context_menu];
     [[UIMenuController sharedMenuController] update];
+    
     
     _mChatEdit.userInteractionEnabled = YES;
     [_mChatView bringSubviewToFront:_mChatEdit];
@@ -347,7 +360,7 @@
     _mReplyView.layer.masksToBounds = YES;
     
     
-    if([_mUser isBlocked] || ([_mUser isGroup] && [_mUser isDeleted])) {
+    if([_mUser isBlocked] || ([_mUser isGroup] && ![_mUser isActive])) {
         _mChatView.hidden = YES;
         //_mCameraBtn.hidden = YES;
         //_mPaneBtn.hidden = YES;
@@ -522,19 +535,19 @@
     int connectionStatus = [MesiboInstance getConnectionStatus];
     
     if(MESIBO_STATUS_CONNECTING == connectionStatus) {
-        return [self updateUserStatus:mMesiboUIOPtions.connectingIndicationTitle duration:0];
+        return [self updateUserStatus:mMesiboUIOptions.connectingIndicationTitle duration:0];
     }
     if(MESIBO_STATUS_NONETWORK == connectionStatus) {
-        return [self updateUserStatus:mMesiboUIOPtions.noNetworkIndicationTitle duration:0];
+        return [self updateUserStatus:mMesiboUIOptions.noNetworkIndicationTitle duration:0];
     }
     if(MESIBO_STATUS_SUSPEND == connectionStatus) {
-        return [self updateUserStatus:mMesiboUIOPtions.suspendedIndicationTitle duration:0];
+        return [self updateUserStatus:mMesiboUIOptions.suspendedIndicationTitle duration:0];
     }
     if(MESIBO_STATUS_CONNECTFAILURE == connectionStatus) {
-        return [self updateUserStatus:mMesiboUIOPtions.offlineIndicationTitle duration:0];
+        return [self updateUserStatus:mMesiboUIOptions.offlineIndicationTitle duration:0];
     }
     if(MESIBO_STATUS_ONLINE != connectionStatus) {
-        return [self updateUserStatus:mMesiboUIOPtions.offlineIndicationTitle duration:0];
+        return [self updateUserStatus:mMesiboUIOptions.offlineIndicationTitle duration:0];
     }
     
     
@@ -548,9 +561,9 @@
     
     if([_mUser isGroup] && ![_mUser isActive]) {
         if([_mUser isDeleted])
-            return [self updateUserStatus:mMesiboUIOPtions.groupDeletedTitle duration:0];
+            return [self updateUserStatus:mMesiboUIOptions.groupDeletedTitle duration:0];
         else
-            return [self updateUserStatus:mMesiboUIOPtions.groupNotMemberTitle duration:0];
+            return [self updateUserStatus:mMesiboUIOptions.groupNotMemberTitle duration:0];
     }
     
     if([profile isTypingInGroup:groupid]) {
@@ -565,7 +578,7 @@
     } else if(!groupid && [profile isChatting]) {
         status = STATUS_CHATTING;
     } else if(!groupid && [profile isOnline]) {
-        status = mMesiboUIOPtions.userOnlineIndicationTitle;
+        status = mMesiboUIOptions.userOnlineIndicationTitle;
     }
     
     return [self updateUserStatus:status duration:0];
@@ -608,6 +621,8 @@
     if(mModel) {
         [mModel start];
     }
+    
+    [self arrangeMediaPaneButtons];
 
 }
 
@@ -1456,8 +1471,9 @@
 }
 
 - (void) onMessageStatus:(int)status {
-    if(MESIBO_MSGSTATUS_INVALIDDEST == status && [_mUser getGroupId] > 0) {
+    if((MESIBO_MSGSTATUS_INVALIDDEST == status || MESIBO_MSGSTATUS_NOTMEMBER == status) && [_mUser getGroupId] > 0) {
         _mChatView.hidden = YES;
+
         //TBD, this is not a right way
         //[[MesiboInstance getDelegates] Mesibo_onUpdateUserProfiles:_mUser];
         [self updateUserStatus:nil duration:0];
@@ -1472,6 +1488,8 @@
 
 - (void) onProfileUpdate {
     [self setProfilePicture];
+    
+    mUserNameLabel.text = [MesiboCommonUtils getUserName:_mUser];
     
     if([_mUser isBlocked] || ([_mUser isGroup] && ![_mUser isActive])) {
         _mChatView.hidden = YES;

@@ -62,7 +62,11 @@
 
 @property (weak, nonatomic) IBOutlet UITableViewWithReloadCallback *mChatTable;
 @property (weak, nonatomic) IBOutlet UIButton *mAttachButton;
+@property (weak, nonatomic) IBOutlet UIButton *mPanelMusicButton;
 
+@property (weak, nonatomic) IBOutlet UIButton *mPanelDocButton;
+@property (weak, nonatomic) IBOutlet UIButton *mPanelLocationButton;
+@property (weak, nonatomic) IBOutlet UIButton *mPanelMediaButton;
 
 @property (strong, nonatomic) IBOutlet UIView *mChatView;
 
