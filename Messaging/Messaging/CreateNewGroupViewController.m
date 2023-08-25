@@ -64,7 +64,6 @@
 
 
 @implementation CreateNewGroupViewController
-
 {
     NSString *mGroupStatus;
     UIColor *mPrimaryColor;
@@ -174,8 +173,12 @@
     
     if(mGroupId == 0) {
         
-        if(mProfile)
-            [MesiboUIManager launchMessageViewController:self withUserData:mProfile uidelegate:_mUiDelegate];
+        if(mProfile) {
+            MesiboMessageScreenOptions *opts = [MesiboMessageScreenOptions new];
+            opts.profile = mProfile;
+            opts.listener = _mUiDelegate;
+            [MesiboUI launchMessaging:self opts:opts];
+        }
         
         NSMutableArray *navigationArray = [[NSMutableArray alloc] initWithArray: self.navigationController.viewControllers];
         int index = (int)[navigationArray count]-2;

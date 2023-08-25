@@ -41,10 +41,9 @@
 
 #import <UIKit/UIKit.h>
 #import "Includes.h"
-
-//#import "MessageData.h"
+#import "MesiboUI.h"
 #import "UITableViewWithReloadCallback.h"
-#import "MesiboMessageView.h"
+#import "MessageData.h"
 
 #import "MesiboMessageModel.h"
 #import "MesiboTableController.h"
@@ -59,8 +58,10 @@
 //@property (strong, nonatomic) MesiboMessage * forwardedMesage;
 
 @property (strong, nonatomic) IBOutlet UIButton *mChatBtn;
+@property (weak, nonatomic) IBOutlet UIButton *mSendBtn;
 
 @property (weak, nonatomic) IBOutlet UITableViewWithReloadCallback *mChatTable;
+
 @property (weak, nonatomic) IBOutlet UIButton *mAttachButton;
 @property (weak, nonatomic) IBOutlet UIButton *mPanelMusicButton;
 
@@ -82,6 +83,7 @@
 //@property (strong,nonatomic) NSString *mProfileFilePath;
 
 @property (strong, nonatomic) MesiboProfile* mUser;
+@property (nonatomic) BOOL mDismissOnBackPressed;
 
 //- (void) ImagePickerCallback:(NSString *) imagePath;
 //- (void) resend:(id) sender;
@@ -108,7 +110,9 @@
 @property (weak, nonatomic) IBOutlet UIView *mReplyView;
 @property (weak, nonatomic) IBOutlet UIButton *mReplyViewCancelBtn;
 
--(void) setTableViewDelegate:(id) tableDelegate;
+@property (strong, nonatomic) MesiboMessageScreenOptions *mOpts;
+
+-(void) setTableViewDelegate:(id<MesiboUIListener>) tableDelegate;
 -(MesiboTableController *) getTableController;
 @end
 

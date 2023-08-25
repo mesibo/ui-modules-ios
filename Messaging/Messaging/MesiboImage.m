@@ -64,6 +64,8 @@ static UIImage * mDefaultProfileImage = nil;
 static UIImage * mDefaultGroupImage = nil;
 static UIImage * mAudioVideoPlayImage = nil;
 static UIImage * mDefaultLocationImage = nil;
+static UIImage * mSecureMessageImage = nil;
+static UIImage * mSecureIconImage = nil;
 static NSMutableDictionary *mImageDict = nil;
 
 +(void) initialize {

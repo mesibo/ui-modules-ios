@@ -41,11 +41,12 @@
 
 #import "MesiboMessageModel.h"
 #import "MesiboMessageViewHolder.h"
-#import "MesiboMessageView.h"
+#import "MessageData.h"
+#import "MesiboUI.h"
 
 @interface MesiboMessageModel ()
 {
-    MesiboParams *mParams;
+    MesiboMessageProperties *mParams;
     MesiboProfile *mProfile;
     //BOOL mMode;
     BOOL mEnableTimestamp;
@@ -101,7 +102,7 @@
     mLastMessageStatus  = -1;
 }
 
--(void) setDestination:(MesiboParams *)params {
+-(void) setDestination:(MesiboMessageProperties *)params {
     mParams = params;
     if(!mParams)
         mEnableTimestamp = NO;
@@ -109,14 +110,13 @@
         mProfile = [MesiboInstance getProfile:mParams.peer groupid:mParams.groupid];
     }
     
-    mReadSession = [MesiboReadSession new];
     if(mParams) {
-        [mReadSession initSession:mParams.peer groupid:mParams.groupid query:nil delegate:self];
+        mReadSession = [mProfile createReadSession:self];
         [mReadSession enableReadReceipt:mEnableReadReceipt];
         [mReadSession enableMissedCalls:mEnableCalls];
     }
     else {
-        [mReadSession initSession:nil groupid:0 query:nil delegate:self];
+        mReadSession = [[MesiboReadSession alloc] initWith:self];
         [mReadSession enableSummary:YES];
     }
     
@@ -144,10 +144,10 @@
 
 -(void) updateConnectionStatus {
     int b = [MesiboInstance getConnectionStatus];
-    [self Mesibo_OnConnectionStatus:b];
+    [self Mesibo_onConnectionStatus:b];
 }
 
--(void) Mesibo_OnSync:(int)count {
+-(void) Mesibo_onSync:(NSInteger)count {
     if(count > 0) {
         mHasMoreMessages = YES;
         id thiz = self;
@@ -156,6 +156,7 @@
         }];
     }
 }
+
 -(BOOL) loadMessages:(int)count {
     if(!mHasMoreMessages)
         return NO;
@@ -200,14 +201,12 @@
 
 -(BOOL) isForMe:(MesiboMessage *) m {
     if([m isRealtimeMessage]) {
-        //[self updateUserActivity:params activity:MESIBO_ACTIVITY_NONE];
     }
     return [m compare:mParams.peer groupid:mParams.groupid];
 }
 
--(BOOL) isForMeParam:(MesiboParams *) m {
+-(BOOL) isForMeParam:(MesiboMessageProperties *) m {
     if([m isRealtimeMessage]) {
-        //[self updateUserActivity:params activity:MESIBO_ACTIVITY_NONE];
     }
     return [m compare:mParams.peer groupid:mParams.groupid];
 }
@@ -216,37 +215,37 @@
     return mLastMessageStatus;
 }
 
-/* Message mode
- 1) insert
- 2) if presence, update presence
- 
- Message List mode
- 1) find and remove the object
- 2) insert at top
- 3) if presence, update presence but not reshuffle
- */
+-(void) redrawMessage:(uint64_t)msgid {
+    MessageData *u = nil;
+    int i = 0;
+    for(u in mList) {
+        if(msgid == [u getMid]) {
+            break;
+        }
+        
+        i++;
+    }
+    
+    if(!u) return;
+    
+    [mDelegate reloadRow:i];
+}
 
-// check if the message is presence, then start timer instead if replacing
+//TBD, date to be fixed
+-(BOOL) reloadIfLastDbMessage:(MesiboMessage *)m {
+    if([m isDbMessage] && [m isLastMessage]) {
+        [mDelegate reloadTable:YES];
+        return YES;
+    }
+    return NO;
+}
 -(void) insert:(MesiboMessage *)m {
     
-   //NSString *ms = [m getMessageAsString];
-    
-    //TBD, should we do it here or let user control it
-    if(![m isMissedCall] && 0 != [m getType])
+    if(![m isMissedCall] && MESIBO_MSGSTATUS_E2E != [m getStatus]  && 0 != [m getType])
         return;
     
     if([m isDbMessage] && [m isLastMessage]) {
         NSLog(@"last");
-    }
-    
-    //WHY???
-    if([m isEmpty]) {
-        [mDelegate reloadTable:YES];
-        return;
-    }
-    
-    if([m isPresence]) {
-        
     }
     
     //happens for real-time
@@ -254,68 +253,15 @@
         return;
     
     
-    // if realtime, add new message at top (0). if from database, bottom
     BOOL reverseOrder = ![m isRealtimeMessage];
     if(mReverseOrder)
         reverseOrder = !reverseOrder;
     
-    MesiboMessageView *data = [MesiboMessageView new];
+    MessageData *data = [MessageData new];
     [data setType:MESSAGEVIEW_MESSAGE];
     [data setMessage:m];
     
-    // depending on the order, we add timestamp after or before message
     [self insertTimestamp:data];
-    
-    MesiboFileInfo *file = nil;
-    MesiboLocation *loc = nil;
-    
-    if([m hasMedia]) {
-        file = m.media.file;
-        loc = m.media.location;
-        
-        //TBD, let's do it from VC on need basis
-        if(file) {
-            //if(file.image==nil) {
-            //    file.image = [MesiboImage getFileTypeImage:[file getPath]];
-            //}
-            
-            [file setData:data];
-            [file setListener:self];
-        }
-        
-        if(loc) {
-            if(loc.update) {
-                int i = 0;
-                MesiboMessageView *u = nil;
-                for(u in mList) {
-                    if(m.mid == [u getMid]) {
-                        break;
-                    }
-                    
-                    i++;
-                }
-                
-                if(!u) return;
-                
-                [mDelegate reloadRow:i];
-                return;
-                /*
-                 UiData *c =(UiData *) [location getData];
-                 MesiboMessageViewHolder *vU = (MesiboMessageViewHolder *)[c getViewHolder];
-                 
-                 if(vU != nil ) {
-                 vU.chatPicture.image = location.image;
-                 [mDelegate reloadData];
-                 }
-                 
-                 */
-            } else {
-                [loc setData:data];
-                //[loc set]
-            }
-        }
-        
-    }
     
     if(!reverseOrder) {
         [mList insertObject:data atIndex:0];
@@ -327,7 +273,7 @@
     [self updateMessageMap:m.mid message:data];
     
     if([m isDbMessage] && [m isLastMessage]) {
-        MesiboMessageView *data = [MesiboMessageView new];
+        MessageData *data = [MessageData new];
         [data setType:MESSAGEVIEW_TIMESTAMP];
         [data setMessage:m];
         [mList insertObject:data atIndex:[mList count]];
@@ -342,15 +288,12 @@
     if([m isInOutbox] && [m isRealtimeMessage]) {
         [mDelegate scrollToBottom:YES];
         if([data getViewHolder] != nil) {
-            //TBD
-            //[(MesiboMessageViewHolder *)([data getViewHolder]) startProgressBar];
             
         }
     }
-    
 }
 
--(void) updateMessageMap:(uint64_t)mid message:(MesiboMessageView *)m {
+-(void) updateMessageMap:(uint64_t)mid message:(MessageData *)m {
     if(m) {
         [mMap setObject:m forKey:@(mid)];
     } else {
@@ -358,16 +301,18 @@
     }
 }
 
--(void) insertTimestamp:(MesiboMessageView *)m {
+-(MessageData *) findMessage:(uint64_t)mid {
+    return [mMap objectForKey:@(mid)];
+}
+
+-(void) insertTimestamp:(MessageData *)m {
      if(!mEnableTimestamp) return;
     
-    
-    
     MesiboMessage *mm = [m getMesiboMessage];
-    MesiboMessageView *lm = nil;
+    MessageData *lm = nil;
     
     if(![mm isRealtimeMessage] && mLastTimestampInserted && [mList count] > 0) {
-        MesiboMessageView *ld = [self get:(int)([mList count]-1)];
+        MessageData *ld = [self get:(int)([mList count]-1)];
         if(MESSAGEVIEW_TIMESTAMP == [ld getType]) {
             [mList removeObject:ld];
         }
@@ -383,7 +328,7 @@
         
         if(!lm || [date caseInsensitiveCompare:[lm getDate]] != NSOrderedSame) {
             
-            MesiboMessageView *data = [MesiboMessageView new];
+            MessageData *data = [MessageData new];
             [data setType:MESSAGEVIEW_TIMESTAMP];
             [data setMessage:[m getMesiboMessage]];
             [mList insertObject:data atIndex:0];
@@ -397,7 +342,7 @@
     }
     
     if(lm && [date caseInsensitiveCompare:[lm getDate]] != NSOrderedSame) {
-        MesiboMessageView *data = [MesiboMessageView new];
+        MessageData *data = [MessageData new];
         [data setType:MESSAGEVIEW_TIMESTAMP];
         [data setMessage:[lm getMesiboMessage]];
         [mList insertObject:data atIndex:[mList count]];
@@ -409,66 +354,61 @@
     if(!mEnableTimestamp) return;
 }
 
--(void) updateStatus:(MesiboParams *)params {
+-(void) updateStatus:(MesiboMessage *)msg {
     
-    // a quick validating if message exists
-    MesiboMessageView *data = [mMap objectForKey:@(params.mid)];
+    MessageData *data = [mMap objectForKey:@(msg.mid)];
     if(nil == data) return;
     
-    if(MESIBO_MSGSTATUS_READ == params.status) {
-        [self setReadStatus];
+    int position = [data getPosition];
+    if(position < 0) return;
+    
+    if([msg isDeleted]) {
+        [data setDeleted:YES];
+        [data resetHeight];
+        [mDelegate reloadRow:position];
         return;
     }
     
-    int i = 0;
-    MesiboMessageView *m = nil;
-    for(m in mList) {
-        if(params.mid == [m getMid]) {
-            break;
+    if([msg isReadByPeer]) {
+        int i = 0;
+        BOOL found = NO;
+        for(MessageData *m in mList) {
+            MesiboMessage *pm = [m getMesiboMessage];
+            
+            if(pm == msg || pm.mid == msg.mid)
+                found = YES;
+            
+            if(pm == msg || !found) {
+                i++;
+                continue;
+            }
+            
+            if([pm isReadByPeer])
+                break;
+            
+            if([pm isDelivered] || [pm isSent]) {
+                [pm setStatus:MESIBO_MSGSTATUS_READ];
+                i++;
+            }
         }
         
-        i++;
-    }
-    
-    if(!m) return;
-    
-    if([params isDeleted]) {
-        [[m getMesiboMessage] setDeleted];
-        [m resetHeight];
-        [mDelegate reloadRow:i];
+        if(i < 1) i = 1;
+        [mDelegate reloadRows:0 end:i-1];
         return;
     }
     
-    [[m getMesiboMessage] setStatus:params.status];
     
-    //TBD. update table view for row i
-    
-    
-    
-    MesiboMessageViewHolder *vh = [m getViewHolder];
+    MesiboMessageViewHolder *vh = [data getViewHolder];
     if(!vh)
         return;
     
-    [vh updateStatusIcon:params.status];
-    
-    // It's best to update status icon rather than updating whole cell
-    
-    //MesiboMessageViewHolder* cell = [_mChatTable cellForRowAtIndexPath:nip];
-    //[cell updateStatusIcon:status];
+    [vh updateStatusIcon:msg.status];
 }
 
--(void) setMessageStatus:(uint64_t)msgid status:(int)status {
-    MesiboParams *p = [MesiboParams new];
-    p.mid = msgid;
-    p.status = status;
-    p.origin = MESIBO_ORIGIN_REALTIME;
-    [self Mesibo_OnMessageStatus:p];
-}
-
--(void) deleteWithTimestamp:(MesiboMessageView *)m {
+-(void) deleteWithTimestamp:(MessageData *)m {
     BOOL hasDate = YES; // default YES for latest message case
     int i = 0;
-    MesiboMessageView *d = nil;
+    MessageData *d = nil;
     for(d in mList) {
         if([d getMid] == [m getMid]) {
             break;
@@ -478,15 +418,13 @@
         i++;
     }
     
-    // if we still have messages for this date, we don't delete timestamp
     if(!d || !hasDate) {
         [mList removeObject:m]; // first case (!d) should not happen, so we just delete
         return;
     }
     
-    //i  points to message
     if(i+1 < [mList count]) {
-        MesiboMessageView *p = [self get:i+1];
+        MessageData *p = [self get:i+1];
         if(MESSAGEVIEW_TIMESTAMP == [p getType])
             [mList removeObject:p];
     }
@@ -494,7 +432,7 @@
     [mList removeObject:m];
 }
 
--(void) deleteMessage:(MesiboMessageView *)m remote:(BOOL)remote refresh:(BOOL)refresh {
+-(void) deleteMessage:(MessageData *)m remote:(BOOL)remote refresh:(BOOL)refresh {
     if(MESSAGEVIEW_TIMESTAMP == [m getType]) return;
     
     if(!remote) {
@@ -506,75 +444,30 @@
             [mList removeObject:m];
     }
     else
-        [[m getMesiboMessage] setDeleted];
+        [m setDeleted:YES];
     
     if(refresh) {
         [mDelegate reloadTable:NO];
     }
 }
 
--(void) setReadStatus {
     
-    int i = 0;
-    
-    for(MesiboMessageView *m in mList) {
-        if(MESIBO_MSGSTATUS_READ == [[m getMesiboMessage] getStatus])
-            break;
-        
-        if(MESIBO_MSGSTATUS_DELIVERED == [[m getMesiboMessage] getStatus]) {
-            [[m getMesiboMessage] setStatus:MESIBO_MSGSTATUS_READ];
-            i++;
-        }
-    }
-    
-    [mDelegate reloadRows:0 end:i-1];
-}
-
--(BOOL) onFileTransferProgress:(MesiboFileInfo *)file {
-    NSLog(@"File Progress: %d", [file getProgress]);
-    MesiboMessageView *c = (MesiboMessageView *)[file getData];
-    
-    if(!c) return YES;
-    
-    MesiboMessageViewHolder *vh = [c getViewHolder];
-    if(!vh)
-      return YES;
-    
-    
-    
-    [vh updateFileProgress:file];
-    return NO;
-}
-
--(MesiboMessageView *) get:(int)row {
-    MesiboMessageView *uidata = [mList objectAtIndex:row];
+-(MessageData *) get:(int)row {
+    MessageData *uidata = [mList objectAtIndex:row];
     if(!uidata) return uidata;
-    uidata.mShowName = NO;
+
     MesiboMessage *m = [uidata getMesiboMessage];
     if(!m) return uidata;
-    if([m getGroupId] > 0) {
-        uidata.mShowName = YES;
+    if([m isGroupMessage]) {
         
         int count = (int) [mList count];
         if(row == count-1)
             return uidata;
         
-        MesiboMessageView *prevdata = [mList objectAtIndex:row+1];
+        MessageData *prevdata = [mList objectAtIndex:row+1];
         if(!prevdata) return uidata;
         
-        MesiboMessage *pm = [prevdata getMesiboMessage];
-        if(!pm) return uidata;
-        
-        if([pm isIncoming] && ![m hasMedia] && ![pm hasMedia]) {
-            
-            NSString *peer = [m getSenderAddress];
-            NSString *prevpeer = [pm getSenderAddress];
-            
-            if(peer &&  prevpeer && [peer isEqualToString:prevpeer]) {
-                uidata.mShowName = NO;
-            }
-        }
-        
+        [uidata checkPreviousData:prevdata];
     }
     return uidata;
 }
@@ -583,29 +476,59 @@
     return [mList count];
 }
 
--(void) Mesibo_OnMessage:(MesiboMessage *)m {
+-(void) Mesibo_onMessage:(MesiboMessage *)m {
     if(!mParams) {
-        //handle user list
         return;
     }
     
     if(![self isForMe:m]) return;
     
-    //Missed call has type
-    if(![m isMissedCall] && 0 != [m getType])
+    if(![m isMissedCall] && MESIBO_MSGSTATUS_E2E != [m getStatus] && 0 != [m getType]) {
+        [self reloadIfLastDbMessage:m];
         return;
+    }
+    
+    if(MESIBO_MSGSTATUS_E2E == [m getStatus]) {
+        if(![MesiboE2EEInstance isEnabled]) {
+            [self reloadIfLastDbMessage:m];
+            return;
+        }
+        
+        if(![MesiboUI getUiDefaults].e2eeActive) {
+            [self reloadIfLastDbMessage:m];
+            return;
+        }
+    }
     
     [self insert:m];
 }
 
+-(void) Mesibo_onEndToEndEncryption:(MesiboProfile *)profile status:(int)status {
+    NSLog(@"Mesibo_onEndToEndEncryption: %d", status);
+}
 
--(void) Mesibo_OnMessageStatus:(MesiboParams *)params {
-    if(!mParams) {
-        //handle user list
+-(void) Mesibo_onMessageUpdate:(MesiboMessage *)msg {
+    MessageData *data = [mMap objectForKey:@(msg.mid)];
+    if(nil == data) return;
+    
+    int position = [data getPosition];
+    if(position < 0) return;
+    
+    if(![msg isFileTransferInProgress]) {
+        [mDelegate reloadRow:position];
         return;
     }
+        
+    MesiboMessageViewHolder *vh = [data getViewHolder];
+    if(!vh) return;
     
-    //TBD. onMessageStatus is always from someone, never group
+    [vh setProgress:[msg getProgress]];
+}
+
+-(void) Mesibo_onMessageStatus:(MesiboMessage *)params {
+    MessageData *md = [self findMessage:params.mid];
+    if(!md) return;
+    
     if(![self isForMeParam:params]) return;
     
     if(params.groupid > 0 && [params isMessageStatusInProgress]) return;
@@ -617,40 +540,29 @@
     [self updateStatus:params];
 }
 
--(void) Mesibo_OnConnectionStatus:(int)status {
-    NSLog(@"OnConnectionStatus status: %d", status);
+-(void) Mesibo_onConnectionStatus:(NSInteger)status {
     if(MESIBO_STATUS_SHUTDOWN == status) {
         [mDelegate onShutdown];
         return;
     }
     
     if(MESIBO_STATUS_ONLINE == status)
-        [mDelegate onPresence:MESIBO_ACTIVITY_ONLINE];
+        [mDelegate onPresence:MESIBO_PRESENCE_ONLINE];
     else
-        [mDelegate onPresence:MESIBO_ACTIVITY_NONE];
+        [mDelegate onPresence:MESIBO_PRESENCE_NONE];
 }
 
--(void) Mesibo_onActivity:(MesiboParams *)params activity:(int)activity {
-    if(![self isForMeParam:params]) return;
+-(void) Mesibo_onPresence:(MesiboPresence *)message {
     
-    [mDelegate onPresence:activity];
+    if(![self isForMeParam:message]) return;
     
-}
-
--(void) Mesibo_OnMessage:(MesiboParams *)params data:(NSData *)data {
-}
--(void) Mesibo_onFile:(MesiboParams *)params file:(MesiboFileInfo *)file{
-}
-- (void) Mesibo_onLocation:(MesiboParams *)params location:(MesiboLocation *)location {
-}
-
-- (BOOL) Mesibo_onFileTransferProgress:(MesiboFileInfo *)file {
-    return [self onFileTransferProgress:file];
+    [mDelegate onPresence:message.presence];
+    
 }
 
 -(void) Mesibo_onProfileUpdated:(MesiboProfile *)profile {
-    
-    if(profile != mProfile)
+     
+    if(!profile || profile != mProfile)
         return;
     
     if([MesiboInstance isUiThread]) {
