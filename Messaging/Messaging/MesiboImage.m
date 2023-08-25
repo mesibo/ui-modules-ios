@@ -112,6 +112,15 @@ static NSMutableDictionary *mImageDict = nil;
     }
     return mCheckedImage;
 }
+
++ (UIImage*) getRadioCheckedImage {
+    if(nil == mCheckedImage) {
+        mCheckedImage = [MesiboImage imageNamed:@"ic_radio_button_checked"];
+        mCheckedImage = [mCheckedImage imageTintedWithColor:[UIColor getColor:CHECKED_COLOR] ];
+    }
+    return mCheckedImage;
+}
+
 + (UIImage*) getUnCheckedImage {
     if(nil == mUnCheckedImage) {
         mUnCheckedImage = [MesiboImage imageNamed:@"ic_radio_button_unchecked"];
@@ -193,8 +202,26 @@ static NSMutableDictionary *mImageDict = nil;
     return [MesiboImage imageNamed:imageName color:0];
 }
 
++(UIImage *) getSecureIcon {
+    if(!mSecureIconImage) {
+        mSecureIconImage = [MesiboImage imageNamed:@"ic_lock"];
+        mSecureIconImage = [mSecureIconImage imageTintedWithColor:[UIColor getColor:0xBBEE0000] ];
+
+    }
+    return mSecureIconImage;
+    
+}
 
 
++(void) setSecureIcon:(UIImageView*)placeHolder {
+    if(!mSecureMessageImage) {
+        mSecureMessageImage = [MesiboImage imageNamed:@"ic_lock"];
+        mSecureMessageImage = [mSecureMessageImage imageTintedWithColor:[UIColor getColor:NORMAL_TICK_COLOR] ];
+        //CGSize s = {16, 16};
+       // mSecureMessageImage = [mSecureMessageImage resizeTo:s];
+    }
+    placeHolder.image = mSecureMessageImage;
+}
 
 + (void) updateStatusIcon :(UIImageView*)placeHolder : (int) status {
 

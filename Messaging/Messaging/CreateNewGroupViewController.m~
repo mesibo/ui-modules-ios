@@ -70,7 +70,7 @@
     UIColor *mPrimaryColor;
     
     uint32_t mGroupId;
-    MesiboUiDefaults *mMesiboUIOptions;
+    MesiboUiOptions *mMesiboUIOptions;
     MesiboProfile *mProfile;
     UIImage *mGroupImage;
     BOOL mDone;
@@ -78,7 +78,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    mMesiboUIOptions = [MesiboUI getUiDefaults];
+    mMesiboUIOptions = [MesiboUI getUiOptions];
     self.title = mMesiboUIOptions.createGroupTitle;
     if(_mGroupModifyMode)
         self.title = MODIFY_GROUP_TITLE_STRING;
@@ -330,7 +330,7 @@
     [profileImage layoutIfNeeded];
     UIImage *image = [ud getThumbnail];
     if(!image)
-        image = [ud getDefaultImage:[MesiboUI getUiDefaults].useLetterTitleImage];
+        image = [ud getDefaultImage:[MesiboUI getUiOptions].useLetterTitleImage];
     
     profileImage.image = image;
     profileImage.layer.cornerRadius = profileImage.layer.frame.size.width/2;
@@ -404,9 +404,11 @@
                 NSLog(@"Returned data %@", [picker description]);
                 [MesiboUIManager launchImageEditor:im withParent:self withImage:picker.image title:CROPPER_TITLE hideEditControls:NO showCaption:NO showCropOverlay:YES squareCrop:YES maxDimension:600 withBlock:^BOOL(UIImage *image, NSString *caption) {
                     dispatch_async(dispatch_get_main_queue(), ^{
+                        // Your UI code //
                         _mGroupImage.image = image;
                         mGroupImage = image;
                     });
+                    NSLog(@"message data %@",caption);
                     return YES;
                     
                 }];

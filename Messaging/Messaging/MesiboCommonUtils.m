@@ -41,10 +41,12 @@
 
 #import "MesiboCommonUtils.h"
 #import <UIKit/UIKit.h>
+#import <UIKit/UIControl.h>
 #import <MobileCoreServices/MobileCoreServices.h>
 #import <AVFoundation/AVFoundation.h>
 #import "Includes.h"
 #import "MesiboConfiguration.h"
+#import <objc/runtime.h>
 
 
 
@@ -126,21 +128,6 @@
     CGImageRelease(imgRef);    // MUST release explicitly to avoid memory leak
     
     return thumbnailImage;
-}
-
-+ (NSString*) getFilePathSimulator:(NSString *) filePath {
-    NSString *fullPath = [MesiboInstance getFilePath:MESIBO_FILETYPE_IMAGE];
-    if(nil != filePath)
-    fullPath = [fullPath stringByAppendingString:filePath];
-    return fullPath;
-}
-
-+ (NSString*) getTnPathSimulator:(NSString *) tnPath {
-    NSString *imagePath = [MesiboInstance getFilePath:MESIBO_FILETYPE_IMAGE];
-    imagePath = [imagePath stringByAppendingPathComponent:@"/tn/"];
-    if(nil != tnPath)
-        imagePath = [imagePath stringByAppendingString:tnPath];
-    return imagePath;
 }
 
 +(NSString *) getUserName:(MesiboProfile *) profile {

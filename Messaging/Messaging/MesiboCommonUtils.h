@@ -63,4 +63,9 @@
 +(BOOL) equals:(NSString *)s old:(NSString *)old;
 +(BOOL) isEmpty:(NSString *)string;
 
++(void) associateObject:(id)parent obj:(id)obj;
++(id) getAssociatedObject:(id)parent;
+
++(BOOL) addTarget:(id)parent view:(id)view action:(SEL)action screen:(id)screen;
++(BOOL) cleanTargets:(id)view ;
 @end

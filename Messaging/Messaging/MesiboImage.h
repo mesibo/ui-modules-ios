@@ -59,11 +59,15 @@
 + (void) updateStatusIcon :(UIImageView*) placeHolder : (int) status;
 + (UIImage*) getStatusIcon :(int) status;
 
++(void) setSecureIcon:(UIImageView*)placeHolder;
++(UIImage *) getSecureIcon;
+
 + (UIImage*) getDefaultProfileImage ;
 + (UIImage *) getFavoriteImage ;
 + (UIImage *) getFavoriteImageOverPicture;
 
 + (UIImage*) getCheckedImage;
++ (UIImage*) getRadioCheckedImage;
 + (UIImage*) getUnCheckedImage;
 
 + (NSString*) getDefaultProfilePath;

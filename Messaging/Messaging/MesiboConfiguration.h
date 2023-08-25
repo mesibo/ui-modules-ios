@@ -50,30 +50,13 @@
 
 /* ----------------------------Bubblechatcell.m---------------------------*/
 #define STATUS_ICON_SIZE 20
-#define FILE_PROGRESS_SIZE 80
+#define FILE_PROGRESS_SIZE 40
 
 #define ICON_SIZE 20
 #define HALF_ICON_SIZE 10
 
 #define MAX_SIZE_TEXTWIDTH_PERCENTAGE 0.75
 //pic_max_witdh = [MesiboInstance getMessageWidthInPoints];
-
-#define TITLE_FONT_SIZE 15.0
-#define TITLE_COLOR BLACK_COLOR
-
-#define MESSAGE_FONT_COLOR_NORMAL  0XFF333333
-#define MESSAGEDELETED_FONT_COLOR_NORMAL  0X7F333333
-#define MESSAGE_FONT_SIZE_NORMAL  16.0
-
-//size for custom messages
-#define MESSAGE_FONT_SIZE_CUSTOM  14.0
-
-
-#define MESSAGE_FONT_COLOR_WITH_PICTURE  0XFFA9A9A9
-#define MESSAGE_FONT_SIZE_WITH_PICTURE  15.0
-
-#define MESSAGE_FONT_COLOR_WITH_REPLY  0XFF333333
-#define MESSAGE_FONT_SIZE_WITH_REPLY  16.0
 
 #define SEMI_TANSPERENT_COLOR  0X40000000
 
@@ -104,13 +87,12 @@
 
 
 #define NO_CONTACTS_AVAILABLE  @"No contact is currently available."
-#define SEARCH_IS_NOT_AVAILABLE  @"Nothing match your query. Refine your search and retry"
 
 #define DEFAULT_MSGPARAMS_EXPIRY 3600*24*7
 
 #define MESIBO_READ_MESSAGES  20
 
-
+#define NAVBAR_LEFT_MARGIN  -16
 #define UIBAR_BUTTON_SIZE 44
 #define NAVBAR_TITLEVIEW_WIDTH 160
 #define NAVBAR_TITLE_FONT_SIZE  16
@@ -126,13 +108,9 @@
 #define MESSAGE_DATE_LASTWEEK_FORMAT   @"E, d MMM"
 
 #define MESSAGE_DATE_SECTION_HEIGHT   40.0
-#define MESSAGE_DATE_FONT_COLOR  BLACK_COLOR
-#define MESSAGE_DATE_FONT_SIZE  13.0
 #define MESSAGE_DATE_FONT_NAME  @"Helvetica"
 #define MESSAGE_DATE_LABEL_CORNER_RADIUS  10.0
 
-#define UNKOWN_USER_STRING @"Unknown User"
-#define UNKOWN_STRING @"Unknown User"
 #define REPLYVIEW_HEIGHT_PADDING_INTERNAL 5
 
 
@@ -144,27 +122,12 @@
 #define MAX_TEXT_VIEW_HEIGHT  100
 
 
-
-#define PICKER_ALERT_TITLE @"Want to Share?"
-#define PICKER_ALERT_MESSAGE @"Select you Choice"
-
-#define PICKER_ALERT_CAMERA_TITLE @"Camera"
-#define PICKER_ALERT_GALLERY_TITLE @"Photo & Video Gallery"
-#define PICKER_ALERT_LOCATION_TITLE @"Location"
-#define PICKER_ALERT_AUDIO_TITLE @"Audio"
-#define PICKER_ALERT_FILES_TITLE @"Document"
-#define PICKER_ALERT_CANCEL_TITLE @"Cancel"
-
-#define STATUS_TYPING  @"typing..."
-#define STATUS_CHATTING  @"joined"
-
-
-
 #define MENU_RESEND_TITLE  @"Resend"
 #define MENU_FORWARD_TITLE  @"Forward"
 #define MENU_SHARE_TITLE  @"Share"
 #define MENU_FAVORITE_TITLE  @"Favorite"
 #define MENU_REPLY_TITLE  @"Reply"
+#define MENU_REPLY_ENCRYPTION  @"Encryption"
 
 #define MSG_STATUS_131_4GROUP_TITLE  @"Invalid Group"
 #define MSG_STATUS_131_4GROUP_MESSAGE  @"You are not a member of this group or not allowed to send message to this group"
@@ -181,20 +144,16 @@
 
 #define USERLIST_NAVBAR_BUTTON_SIZE  UIBAR_BUTTON_SIZE
 
-#define USERLIST_READ_MESSAGE_COUNT  100
 
 //#define CREATE_NEW_GROUP_STRING @"Create a New Group"
-#define CREATE_NEW_GROUP_DISCRIPTION  @"Add group members from the list";
+#define CREATE_NEW_GROUP_DISCRIPTION  @"Add group members from the list"
 
 #define ATTACHMENT_STRING @" Attachment"
-#define IMAGE_STRING @" Image"
+#define IMAGE_STRING @" Picture"
 #define VIDEO_STRING @" Video"
+#define AUDIO_STRING @" Audio"
 #define LOCATION_STRING @" Location"
-#define MISSEDVOICECALL_STRING @" Missed voice call"
-#define MISSEDVIDEOCALL_STRING @" Missed video call"
-#define MESSAGEDELETED_STRING @" This message was deleted"
 
-#define DELETE_ALERT_TITLE  @"Delete Messages"
 #define DELETE_ALERT_MESSAGES  @"Delete chat with %@"
 
 #define FORWARD_ALERT_TITLE  @"Forwarding"
@@ -210,13 +169,8 @@
 
 
 #define ARCHIVE_TITLE_STRING  @"Archive"
-#define DELETE_TITLE_STRING @"Delete"
-
-#define  RECENT_USERS_STRING    @"Recent Users"
-#define  GROUP_MEMBERS_STRING    @"Group members"
 
 #define  FREQUENT_USER_LIST_STRING @"Frequent Users"
-#define  ALL_USER_LIST_STRING   @"All Users"
 #define  SEARCH_USERS_STRING    @" %d USERS"
 #define  SEARCH_MESSAGES_STRING  @" %d MESSAGES"
 
