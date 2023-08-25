@@ -1,4 +1,4 @@
-/** Copyright (c) 2021 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -40,23 +40,25 @@
  */
 
 #import <UIKit/UIKit.h>
+#import "MesiboUI.h"
 #import "ThumbnailProgressView.h"
 #import "MesiboMessageViewController.h"
-#import "MesiboMessageView.h"
+#import "MessageData.h"
 #import "MesiboViewHolder.h"
 
 
 @interface MesiboMessageViewHolder : MesiboViewHolder <UITextViewDelegate>
 
--(MesiboMessageView *) getMessage;
--(void) setMessage:(MesiboMessageView *)uidata indexPath:(NSIndexPath *)indexPath ;
-
+-(MessageData *) getMessage;
+-(void) setMessage:(MessageData *)uidata indexPath:(NSIndexPath *)indexPath ;
+-(void) setMesiboRow:(MesiboMessageRow *) row;
 -(void) updateStatusIcon :(int) status;
 - (void) setProgress:(int) progress;
 - (void) startProgressBar;
 - (void) stopProgressBar;
 -(void) clicked;
--(void) updateFileProgress:(MesiboFileInfo *) file;
+-(void) updateFileProgress:(MesiboFile *) file;
+-(NSIndexPath *) getPosition;
 
 -(UIView *) getAccessoryView;
 @end

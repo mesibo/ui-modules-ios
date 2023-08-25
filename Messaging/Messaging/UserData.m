@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -51,17 +51,12 @@
     UIImage *mThumbnail;
     UIImage *mImage;
     NSString *mLastMessage;
-    NSString *mTime;
-    NSString *mCatchedPicturePath;
-    int mUnreadCount;
-    int mStatus;
     BOOL mDeleted;
-    uint64_t mId;
     
     BOOL mFixedImage;
     NSIndexPath * mUserListPosition;
-    uint64_t mTypingTs;
     MesiboProfile *mTypingProfile;
+    MesiboMessage *mMsg;
 }
 
 @end
@@ -84,26 +79,77 @@
     mThumbnail = nil;
     mImage = nil;
     mLastMessage = nil;
-    mTime = @"";
-    mCatchedPicturePath = nil;
-    mStatus = MESIBO_MSGSTATUS_RECEIVEDNEW;
+    mMsg = nil;
     mDeleted = NO;
-    mId = 0;
-    mUnreadCount = 0;
     
     mFixedImage = NO;
     mUserListPosition = nil;
-    mTypingTs = 0;
     mTypingProfile = nil;
     return self;
 }
 
--(void) setMessage:(uint64_t)messageid time:(NSString*)msgtime status:(int)status deleted:(BOOL)deleted msg:(NSString*)msg {
-    mTime = msgtime;
-    mStatus = status;
-    mDeleted = deleted;
-    mId = messageid;
-    mLastMessage = msg;
+-(NSString *) appendNameToMessage:(MesiboMessage *)params message:(NSString *)message {
+    NSString * name = params.peer;
+    if(params.profile)
+        name = [params.profile getFirstName];
+    
+    if(!name || !name.length) return message;
+    if(name.length > 12)
+        name = [name substringToIndex:12];
+    
+    return [NSString stringWithFormat:@"%@: %@", name, message];
+}
+
+-(void) setMessage:(MesiboMessage *) message {
+    mMsg = message;
+    
+    NSString * str = mMsg.message;
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    if([mMsg isDeleted]) {
+        str = opts.deletedMessageTitle;
+        [self setTextMessage:str];
+        return;
+    }
+    
+    
+    if(!str || !str.length) str = mMsg.title;
+    if(!str || !str.length) {
+        if ([mMsg hasImage])
+            str = IMAGE_STRING;
+        else if ([mMsg hasVideo])
+            str = VIDEO_STRING;
+        else if ([mMsg hasAudio ])
+            str = AUDIO_STRING;
+        else if ([mMsg hasFile])
+            str = ATTACHMENT_STRING;
+        else if ([mMsg hasLocation])
+            str = LOCATION_STRING;
+    }
+    
+    if([mMsg isGroupMessage] && [mMsg isIncoming]) {
+        str = [self appendNameToMessage:mMsg message:str];
+    }
+    
+    if([mMsg isMissedCall]) {
+        str = opts.missedVideoCallTitle;
+        if([mMsg isVoiceCall])
+            str = opts.missedVoiceCallTitle;
+    }
+    
+    [self setTextMessage:str];
+}
+
+-(void) setTextMessage:(NSString *) message {
+    mLastMessage = message;
+}
+
+-(NSString *) getLastMessage {
+    if(!mLastMessage) return @"";
+    return mLastMessage;
+}
+
+-(MesiboMessage *) getMessage {
+    return mMsg;
 }
 
 -(NSString *) getPeer {
@@ -115,11 +161,8 @@
 }
 
 -(uint64_t) getMid {
-    return mId;
-}
-
--(void) setMid:(uint64_t)msgid {
-    mId = msgid;
+    if(mMsg) return mMsg.mid;
+    return 0;
 }
 
 -(void) setUser:(MesiboProfile *) profile {
@@ -133,41 +176,17 @@
 }
 
 -(int) getUnreadCount {
-    return mUnreadCount;
-}
-
--(void) setUnreadCount:(int)count {
-    mUnreadCount = count;
-}
-
--(void) clearUnreadCount {
-    mUnreadCount = 0;
+    return [mUser getUnreadMessageCount];
 }
 
 -(int) getMessageStatus {
-    return mStatus;
-}
-
--(void) setMessageStatus:(int) status {
-    mStatus = status;
-}
-
--(void) setLastMessage:(NSString *) lastMsg {
-    mLastMessage = lastMsg;
-}
-
--(NSString *) getLastMessage {
-    if([self isDeleted])
-        return MESSAGEDELETED_STRING;
-    return mLastMessage;
+    if(!mMsg) return MESIBO_MSGSTATUS_RECEIVEDREAD;
+    return [mMsg getStatus];
 }
 
 -(NSString *) getTime {
-    return mTime;
-}
-
--(void) setTime:(NSString *)msgTime {
-    mTime = msgTime;
+    if(!mMsg) return @"";
+    return [mMsg getTime:NO];
 }
 
 -(NSString *) getName {
@@ -179,11 +198,16 @@
 }
 
 -(BOOL)isDeleted {
-    return mDeleted;
+    if(!mMsg)    return mDeleted;
+    return (mDeleted || [mMsg isDeleted]);
 }
 
 -(void)setDeleted:(BOOL)deleted {
     mDeleted = deleted;
+}
+
+-(void) setTyping:(MesiboProfile *) profile {
+    mTypingProfile = profile;
 }
 
 -(NSString *) getImagePath {
@@ -204,8 +228,6 @@
     if(mImage) return mImage;
     
     return nil;
-    
-    
 }
 
 -(UIImage *) getThumbnail {
@@ -234,14 +256,6 @@
     return image;
 }
 
--(void) clearTyping {
-    mTypingTs = 0;
-}
-
--(void) setTyping:(MesiboProfile *) profile {
-    mTypingProfile = profile;
-}
-
 -(BOOL) isTyping {
     if(mTypingProfile) return [mTypingProfile isTypingInGroup:[mUser getGroupId]];
     return [mUser isTypingInGroup:[mUser getGroupId]];
@@ -259,7 +273,7 @@
     return mUserListPosition;
 }
 
-+(UserData *) getUserDataFromParams:(MesiboParams *) params {
++(UserData *) getUserDataFromParams:(MesiboMessageProperties *) params {
     if(!params || !params.profile)
         return nil;
     

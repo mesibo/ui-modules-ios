@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -41,7 +41,6 @@
 
 #import "UserListViewController.h"
 #import "MesiboMessageViewController.h"
-//#import "ProfileHandler.h"
 #import "MesiboImage.h"
 #import "UIImage+Tint.h"
 #import "UIColors.h"
@@ -63,14 +62,11 @@
     NSMutableArray *mCommonNFilterArray;
     NSMutableArray *mTableList;
     //NSMutableDictionary *mProfilesLookup;
-    UILabel *mUserStatusLbl;
-    UILabel *mUserNameLbl;
     CGRect mShowUserStatusFrm;
     CGRect mHideUserStatusFrm;
-    MesiboUiOptions *mMesiboUIOptions;
+    MesiboUiDefaults *mMesiboUIOptions;
     
     BOOL mIsMessageSearching;
-    // comon utility array for searching and deplying section in "forward to user" list
     NSMutableArray *mUtilityArray;
     
     NSMutableArray *mSelectedMembers;
@@ -78,13 +74,18 @@
     NSBundle *mMessageBundle;
     NSTimer* mUiUpdateTimer;
     uint64_t mTiUpdateTimestamp;
+    uint64_t mRefreshTs;
     
     UIColor *mStatusColor, *mTypingColor, *mPrimaryColor;
-    int mTotalUnreadCount;
     MesiboReadSession *mReadSession;
     
     NSMutableArray* mGroupMembers;
     MesiboProfile* mGroupProfile ;
+    
+    MesiboUserListScreen *mScreen;
+    MesiboUserListRow *mMessageRow;
+    
+    BOOL mFirstOnline;
 }
 
 -(void) setGroupMembers:(NSMutableArray *)members {
@@ -102,19 +103,36 @@
 }
 
 
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     
+    if (@available(iOS 13.0, *)) {
+        self.overrideUserInterfaceStyle = UIUserInterfaceStyleLight;
+    } 
+    
+    mScreen = [MesiboUserListScreen new];
+    mScreen.parent = self;
+    mScreen.options = _mOpts;
+    mScreen.mode = _mMode;
+    
+    mMessageRow = [MesiboUserListRow new];
+    mMessageRow.screen = mScreen;
+    
     mReadSession = nil;
-    mTotalUnreadCount = 0;
     mUiUpdateTimer = nil;
     mTiUpdateTimestamp = 0;
-    mMesiboUIOptions = [MesiboUI getUiOptions];
+    mRefreshTs = 0;
+    mFirstOnline = NO;
+    mMesiboUIOptions = [MesiboUI getUiDefaults];
     mUsersList = [[NSMutableArray alloc] init];
     mCommonNFilterArray = [[NSMutableArray alloc] init];
     mUtilityArray = [[NSMutableArray alloc] init];
     mSelectedMembers = [[NSMutableArray alloc] init];
     mGroupMembers = [[NSMutableArray alloc] init];
+    
+    if(!_mUiDelegateForMessageView)
+        _mUiDelegateForMessageView = _mUiDelegate;
     
     
     mPrimaryColor = [UIColor getColor:0xff00868b];
@@ -122,13 +140,8 @@
         mPrimaryColor = [UIColor getColor:mMesiboUIOptions.mToolbarColor];
     
     
-    //mPrimaryColor = [UIColor getColor:0xff00868b];
-    
     mStatusColor = [UIColor getColor:mMesiboUIOptions.mUserListStatusColor];
     mTypingColor = [UIColor getColor:mMesiboUIOptions.mUserListTypingIndicationColor];
-    
-    // [[UINavigationBar appearance] setTintColor: mPrimaryColor];
-    // self.navigationController.navigationBar.barTintColor = mPrimaryColor;
     
     if(_mForwardGroupid) {
         mGroupProfile = [MesiboInstance getGroupProfile:_mForwardGroupid];
@@ -145,144 +158,29 @@
         
     }
     
-    [self updateTitles:_mNewContactChooser];
+    [self updateTitles:mScreen.mode];
     
     mMessageBundle = [[NSBundle alloc] initWithURL:bundleURL];
     _mUsersTableView.delegate = self;
     
-    UIButton *button =  [UIButton buttonWithType:UIButtonTypeCustom];
-    [button setImage:[MesiboImage imageNamed:@"ic_arrow_back_white.png"] forState:UIControlStateNormal];
-    [button addTarget:self action:@selector(barButtonBackPressed:)forControlEvents:UIControlEventTouchUpInside];
-    [button setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
-    UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
-    self.navigationItem.leftBarButtonItem = barButton;
-    
-    if(_mNewContactChooser == USERLIST_MESSAGE_MODE && !mMesiboUIOptions.enableBackButton)
-        self.navigationItem.leftBarButtonItem = nil;
-    
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)  {
-        if(_mNewContactChooser==USERLIST_FORWARD_MODE) {
-            UIButton *button1 =  [UIButton buttonWithType:UIButtonTypeCustom];
-            
-            [button1 setImage:[MesiboImage imageNamed:@"ic_forward_white.png"] forState:UIControlStateNormal];
-            [button1 addTarget:self action:@selector(forwardMessageToContacts)forControlEvents:UIControlEventTouchUpInside];
-            [button1 setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
-            UIBarButtonItem *barButton1 = [[UIBarButtonItem alloc] initWithCustomView:button1];
-            self.navigationItem.rightBarButtonItem = barButton1;
-            
-        } else if (_mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
-            UIButton *button1 =  [UIButton buttonWithType:UIButtonTypeCustom];
-            
-            [button1 setImage:[MesiboImage imageNamed:@"ic_group_add_white.png"] forState:UIControlStateNormal];
-            [button1 addTarget:self action:@selector(createNewGroup)forControlEvents:UIControlEventTouchUpInside];
-            [button1 setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
-            UIBarButtonItem *barButton1 = [[UIBarButtonItem alloc] initWithCustomView:button1];
-            self.navigationItem.rightBarButtonItem = barButton1;
-            
-        }
-        
-    }else {
-        
-        if (_mNewContactChooser == USERLIST_MESSAGE_MODE) {
-            NSArray *btnArray = [[MesiboInstance getDelegates] Mesibo_onGetMenu:self type:0 profile:nil];
-            NSMutableArray *barBtnArray = [[NSMutableArray alloc] init];
-            for(int i = 0 ; i < [btnArray count]; i++) {
-                UIButton *button = [btnArray objectAtIndex:i];
-                [button addTarget:self action:@selector(uiBarButtonPressed:)forControlEvents:UIControlEventTouchUpInside];
-                [button setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
-                UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
-                [barBtnArray insertObject:barButton atIndex:0];
-            }
-            
-            if(mMesiboUIOptions.enableMessageButton && (!btnArray || !btnArray.count)) {
-                UIButton *button =  [UIButton buttonWithType:UIButtonTypeCustom];
-                [button setImage:[UIImage imageNamed:@"ic_message_white"] forState:UIControlStateNormal];
-                [button setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
-                [button setTag:0];
-                [button addTarget:self action:@selector(uiBarButtonPressed:)forControlEvents:UIControlEventTouchUpInside];
-                UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
-                [barBtnArray insertObject:barButton atIndex:0];
-            }
-            
-            self.navigationItem.rightBarButtonItems = barBtnArray;
-            
-        }
-        
-        UIFont *titleFont = [UIFont boldSystemFontOfSize:NAVBAR_TITLE_FONT_SIZE];
-        
-        NSString *title = [self getAppTitle];
-        
-        CGSize size = [title sizeWithAttributes:@{NSFontAttributeName: titleFont}];
-        
-        CGSize titleSize = CGSizeMake(ceilf(size.width), ceilf(size.height));
-        UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, NAVBAR_TITLEVIEW_WIDTH, titleSize.height)];
-        titleLabel.backgroundColor = [UIColor clearColor];
-        titleLabel.textColor = [UIColor getColor:NAVIGATION_TITLE_COLOR];
-        titleLabel.textAlignment = NSTextAlignmentCenter;
-        titleLabel.font = titleFont;
-        titleLabel.text = title;
-        titleLabel.tag = 21;
-        
-        //[titleLabel sizeToFit];
-        
-        UIFont *subtitleFont = [UIFont systemFontOfSize:NAVBAR_SUBTITLE_FONT_SIZE];
-        size = [@"Connecting" sizeWithAttributes:@{NSFontAttributeName: subtitleFont}];
-        CGSize subtitleSize = CGSizeMake(ceilf(size.width), ceilf(size.height));
-        
-        UILabel *subTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, titleSize.height, NAVBAR_TITLEVIEW_WIDTH, subtitleSize.height)];
-        subTitleLabel.backgroundColor = [UIColor clearColor];
-        subTitleLabel.textColor = [UIColor getColor:NAVIGATION_TITLE_COLOR];
-        subTitleLabel.font = [UIFont systemFontOfSize:NAVBAR_SUBTITLE_FONT_SIZE];
-        subTitleLabel.text = @". . . . .  . . . . . . . . ";
-        subTitleLabel.textAlignment = NSTextAlignmentCenter;
-        subTitleLabel.tag = 20;
-        //[subTitleLabel sizeToFit];
-        
-        CGFloat vw = MAX(subTitleLabel.frame.size.width, titleLabel.frame.size.width);
-        //if(vw < NAVBAR_TITLEVIEW_WIDTH) vw = NAVBAR_TITLEVIEW_WIDTH;
-        
-        
-        UIView *twoLineTitleView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, vw, titleSize.height + subtitleSize.height)];
-        [twoLineTitleView addSubview:titleLabel];
-        [twoLineTitleView addSubview:subTitleLabel];
-        
-#if 0
-        float widthDiff = subTitleLabel.frame.size.width - titleLabel.frame.size.width;
-        
-        if (widthDiff > 0) {
-            CGRect frame = titleLabel.frame;
-            frame.origin.x = widthDiff / 2;
-            titleLabel.frame = CGRectIntegral(frame);
-        }else{
-            CGRect frame = subTitleLabel.frame;
-            frame.origin.x = abs((int)(widthDiff) / 2);
-            subTitleLabel.frame = CGRectIntegral(frame);
-        }
-#endif
-        self.navigationItem.titleView = twoLineTitleView;
-        
-        mUserStatusLbl = subTitleLabel;
-        mUserNameLbl = titleLabel;
-        int status = [MesiboInstance getConnectionStatus];
-        if(status == MESIBO_STATUS_ONLINE)
-            mUserStatusLbl.text = @"";
-        else
-            mUserStatusLbl.text = mMesiboUIOptions.connectingIndicationTitle;
-        
-        mShowUserStatusFrm = mUserNameLbl.frame;
-        CGRect frame = mShowUserStatusFrm;
-        frame.origin.y += NAVBAR_TITLE_FONT_DISPLACEMENT;
-        
-        mHideUserStatusFrm = frame;
-        
-        mUserNameLbl.frame = mHideUserStatusFrm;
-        
-        self.navigationItem.leftItemsSupplementBackButton = YES;
-        mUserStatusLbl.hidden = YES;
-        
-    }
+    mScreen.table = _mUsersTableView;
     
     
+    [self initSearchController];
+    
+    [self initCommonNavigationButtons];
+    [self initMessageListNavigationTitles];
+    
+    [self initOtherListNavigationButtons];
+    
+    [MesiboCommonUtils setNavigationBarColor:self.navigationController.navigationBar color:mPrimaryColor];
+    
+    if(_mUiDelegate) [_mUiDelegate MesiboUI_onInitScreen:mScreen];
+    
+    [self initMessageListNavigationButtons];
+}
+
+-(void) initSearchController {
     self.searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
     self.searchController.searchResultsUpdater = self;
     self.searchController.searchBar.delegate = self;
@@ -296,27 +194,171 @@
     
     [self.searchController.searchBar setBackgroundImage:[UIImage new]];
     [self.searchController.searchBar setTranslucent:YES];
+    
     BOOL enableSearch = mMesiboUIOptions.enableSearch;
     
-    if(USERLIST_FORWARD_MODE == _mNewContactChooser || USERLIST_EDIT_GROUP_MODE == _mNewContactChooser)
+    if(USERLIST_MODE_FORWARD == _mMode || USERLIST_MODE_EDITGROUP == _mMode)
         enableSearch = NO;
     
     
     if(enableSearch) {
         _mUsersTableView.tableHeaderView = self.searchController.searchBar;
-        // we want to be the delegate for our filtered table so did SelectRowAtIndexPath is called for both tables
-        //self.searchResultsController.tableView.delegate = self;
+        
         self.searchController.delegate = self;
         self.searchController.dimsBackgroundDuringPresentation = NO; // default is YES
         self.searchController.searchBar.delegate = self; // so we can monitor text changes + others
-        self.definesPresentationContext = YES;  // know where you want UISearchController to be displayed
-        [self.tableView setContentOffset:CGPointMake(0, self.searchController.searchBar.frame.size.height)];
+        self.definesPresentationContext = YES;  // know where you want
+        //UISearchController to be displayed
+        if(!mMesiboUIOptions.alwaysShowSearchBar) {
+            [self.tableView setContentOffset:CGPointMake(0, self.searchController.searchBar.frame.size.height)];
+            
+        } else {
+            [self.tableView setContentOffset:CGPointMake(0, 0)];
+        }
         _mUsersTableView.allowsMultipleSelectionDuringEditing = NO;
         _mUsersTableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
         self.definesPresentationContext = YES;
         self.extendedLayoutIncludesOpaqueBars = YES;
     }
     
+    mScreen.search = self.searchController;
+}
+
+-(void) initMessageListNavigationTitles {
+    if(mScreen.mode != USERLIST_MODE_MESSAGES) return;
+    
+    UIFont *titleFont = [UIFont boldSystemFontOfSize:NAVBAR_TITLE_FONT_SIZE];
+    
+    NSString *title = [self getAppTitle];
+    
+    CGSize size = [title sizeWithAttributes:@{NSFontAttributeName: titleFont}];
+    
+    CGSize titleSize = CGSizeMake(ceilf(size.width), ceilf(size.height));
+    
+    // keep maximum size so that bigger app name can be accomodated
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, NAVBAR_TITLEVIEW_WIDTH, titleSize.height)];
+    titleLabel.backgroundColor = [UIColor clearColor];
+    titleLabel.textColor = [UIColor getColor:NAVIGATION_TITLE_COLOR];
+    titleLabel.textAlignment = NSTextAlignmentCenter;
+    titleLabel.font = titleFont;
+    titleLabel.text = title;
+    titleLabel.tag = 21;
+    
+    UIFont *subtitleFont = [UIFont systemFontOfSize:NAVBAR_SUBTITLE_FONT_SIZE];
+    size = [@"Connecting" sizeWithAttributes:@{NSFontAttributeName: subtitleFont}];
+    CGSize subtitleSize = CGSizeMake(ceilf(size.width), ceilf(size.height));
+    
+    UILabel *subTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, titleSize.height, NAVBAR_TITLEVIEW_WIDTH, subtitleSize.height)];
+    subTitleLabel.backgroundColor = [UIColor clearColor];
+    subTitleLabel.textColor = [UIColor getColor:NAVIGATION_TITLE_COLOR];
+    subTitleLabel.font = [UIFont systemFontOfSize:NAVBAR_SUBTITLE_FONT_SIZE];
+    subTitleLabel.text = @". . . . .  . . . . . . . . ";
+    subTitleLabel.textAlignment = NSTextAlignmentCenter;
+    subTitleLabel.tag = 20;
+    
+    CGFloat vw = MAX(subTitleLabel.frame.size.width, titleLabel.frame.size.width);
+    
+    
+    UIView *twoLineTitleView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, vw, titleSize.height + subtitleSize.height)];
+    [twoLineTitleView addSubview:titleLabel];
+    [twoLineTitleView addSubview:subTitleLabel];
+    
+    
+    
+    self.navigationItem.titleView = twoLineTitleView;
+    
+    
+    mScreen.title = titleLabel;
+    mScreen.subtitle = subTitleLabel;
+    mScreen.titleArea = twoLineTitleView;
+    
+    [MesiboCommonUtils associateObject:mScreen.title obj:mScreen];
+    [MesiboCommonUtils associateObject:mScreen.subtitle obj:mScreen];
+    [MesiboCommonUtils associateObject:mScreen.titleArea obj:mScreen];
+    
+    int status = [MesiboInstance getConnectionStatus];
+    if(status == MESIBO_STATUS_ONLINE)
+        mScreen.subtitle.text = @"";
+    else
+        mScreen.subtitle.text = mMesiboUIOptions.connectingIndicationTitle;
+    
+    mShowUserStatusFrm = mScreen.title.frame;
+    CGRect frame = mShowUserStatusFrm;
+    frame.origin.y += NAVBAR_TITLE_FONT_DISPLACEMENT;
+    
+    mHideUserStatusFrm = frame;
+    
+    mScreen.title.frame = mHideUserStatusFrm;
+    mScreen.subtitle.hidden = YES;
+}
+
+-(void) initCommonNavigationButtons {
+    UIButton *button =  [UIButton buttonWithType:UIButtonTypeCustom];
+    [button setImage:[MesiboImage imageNamed:@"ic_arrow_back_white.png"] forState:UIControlStateNormal];
+    [button addTarget:self action:@selector(barButtonBackPressed:)forControlEvents:UIControlEventTouchUpInside];
+    [button setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
+    UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
+    self.navigationItem.leftBarButtonItem = barButton;
+}
+
+-(void) initMessageListNavigationButtons {
+    if(mScreen.mode != USERLIST_MODE_MESSAGES) return;
+    
+    if(!mMesiboUIOptions.enableBackButton)
+        self.navigationItem.leftBarButtonItem = nil;
+    
+    NSArray *btnArray = mScreen.buttons;
+    NSMutableArray *barBtnArray = [[NSMutableArray alloc] init];
+    for(int i = 0 ; btnArray && i < [btnArray count]; i++) {
+        UIButton *button = [btnArray objectAtIndex:i];
+        [MesiboCommonUtils associateObject:button obj:mScreen];
+        if(button.tag == MESIBOUI_TAG_NEWMESSAGE) {
+            [MesiboCommonUtils cleanTargets:button];
+            [button addTarget:self action:@selector(selectContactForMessage:) forControlEvents:UIControlEventTouchUpInside];
+        }
+        
+        [button setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
+        UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
+        [barBtnArray insertObject:barButton atIndex:0];
+    }
+    
+    if(mMesiboUIOptions.enableMessageButton && (!btnArray || !btnArray.count)) {
+        UIButton *button =  [UIButton buttonWithType:UIButtonTypeCustom];
+        [MesiboCommonUtils associateObject:button obj:mScreen];
+        [button setImage:[UIImage imageNamed:@"ic_message_white"] forState:UIControlStateNormal];
+        [button setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
+        [button addTarget:self action:@selector(selectContactForMessage:)forControlEvents:UIControlEventTouchUpInside];
+        UIBarButtonItem *barButton = [[UIBarButtonItem alloc] initWithCustomView:button];
+        [barBtnArray insertObject:barButton atIndex:0];
+    }
+    
+    self.navigationItem.rightBarButtonItems = barBtnArray;
+    self.navigationItem.leftItemsSupplementBackButton = YES;
+    
+}
+
+-(void) initOtherListNavigationButtons {
+    if(mScreen.mode == USERLIST_MODE_MESSAGES) return;
+    
+    if(_mMode== USERLIST_MODE_FORWARD) {
+        UIButton *button1 =  [UIButton buttonWithType:UIButtonTypeCustom];
+        
+        [button1 setImage:[MesiboImage imageNamed:@"ic_forward_white.png"] forState:UIControlStateNormal];
+        [button1 addTarget:self action:@selector(forwardMessageToContacts)forControlEvents:UIControlEventTouchUpInside];
+        [button1 setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
+        UIBarButtonItem *barButton1 = [[UIBarButtonItem alloc] initWithCustomView:button1];
+        self.navigationItem.rightBarButtonItem = barButton1;
+        
+    } else if (_mMode == USERLIST_MODE_GROUPS || _mMode == USERLIST_MODE_EDITGROUP) {
+        UIButton *button1 =  [UIButton buttonWithType:UIButtonTypeCustom];
+        
+        [button1 setImage:[MesiboImage imageNamed:@"ic_group_add_white.png"] forState:UIControlStateNormal];
+        [button1 addTarget:self action:@selector(createNewGroup)forControlEvents:UIControlEventTouchUpInside];
+        [button1 setFrame:CGRectMake(0, 0, USERLIST_NAVBAR_BUTTON_SIZE, USERLIST_NAVBAR_BUTTON_SIZE)];
+        UIBarButtonItem *barButton1 = [[UIBarButtonItem alloc] initWithCustomView:button1];
+        self.navigationItem.rightBarButtonItem = barButton1;
+        
+    }
 }
 
 -(NSString *) getAppTitle {
@@ -330,35 +372,38 @@
 }
 
 - (void) updateTitles: (int) mode {
-    if(mode == USERLIST_MESSAGE_MODE) {
+    if(mode == USERLIST_MODE_MESSAGES) {
         
         self.title = [self getAppTitle] ;
     }
-    else if(mode == USERLIST_CONTACTS_MODE)
+    else if(mode == USERLIST_MODE_CONTACTS)
         self.title = mMesiboUIOptions.selectContactTitle ;
-    else if(mode == USERLIST_FORWARD_MODE)
+    else if(mode == USERLIST_MODE_FORWARD)
         self.title = mMesiboUIOptions.forwardTitle ;
-    else if(mode == USERLIST_SELECTION_GROUP)
+    else if(mode == USERLIST_MODE_GROUPS)
         self.title = mMesiboUIOptions.selectGroupContactsTitle ;
-    else if(mode == USERLIST_EDIT_GROUP_MODE)
+    else if(mode == USERLIST_MODE_EDITGROUP)
         self.title = mMesiboUIOptions.selectGroupContactsTitle ;
     
 }
 
+#if 0
 - (void) uiBarButtonPressed: (id) sender {
     int tag = (int) [(UIBarButtonItem*)sender tag];
     if(tag == 0 ){
-        [self launchSelfViewController];
+        [self selectContactForMessage:nil];
     } else {
         
-        [[MesiboInstance getDelegates] Mesibo_onMenuItemSelected:self type:0 profile:nil item:tag];
+        if(_mUiDelegate)
+            [_mUiDelegate MesiboUI_onClicked:mScreen row:nil view:sender];
     }
     
 }
+#endif
 
--(void) launchSelfViewController {
+-(void) selectContactForMessage:(id) sender {
     
-    [MesiboUIManager launchUserListViewcontroller:self withChildViewController:[self.storyboard instantiateViewControllerWithIdentifier:@"UserListViewController"] withContactChooser:USERLIST_CONTACTS_MODE withForwardMessageData:nil withMembersList:nil withForwardGroupName:nil withForwardGroupid:0];
+    [MesiboUIManager launchUserListViewcontroller:self withChildViewController:[self.storyboard instantiateViewControllerWithIdentifier:@"UserListViewController"] withContactChooser:USERLIST_MODE_CONTACTS withForwardMessageData:nil withMembersList:nil withForwardGroupName:nil withForwardGroupid:0];
 }
 
 
@@ -370,20 +415,22 @@
     
     mTiUpdateTimestamp = [MesiboInstance getTimestamp];
     
+    //NSLog(@"Updating table");
     if(nil == indexPath) {
         [_mUsersTableView reloadData];
         return;
     }
     
+    MesiboUserListRow *mrow = [self mesiboRowForIndexPath:indexPath];
+    
     @try {
         UITableViewCell *cell = [_mUsersTableView cellForRowAtIndexPath:indexPath];
         if(cell)
-            [self updateCell:cell index:indexPath];
+            [self updateCell:cell index:indexPath mrow:mrow];
     }
     @catch(NSException *e) {
         [_mUsersTableView reloadData];
     }
-    //[_mUsersTableView endUpdates];
 }
 
 -(void) refreshTable {
@@ -407,10 +454,9 @@
 }
 
 -(void) updateNotificationBadge {
-    [UIApplication sharedApplication].applicationIconBadgeNumber = mTotalUnreadCount;
 }
 
--(void) addNewMessage:(MesiboParams *)params message:(NSString *)message {
+-(void) addNewMessage:(MesiboMessage *)params {
     
     if(mUiUpdateTimer) {
         [mUiUpdateTimer invalidate];
@@ -426,27 +472,17 @@
         mTableList = mCommonNFilterArray;
     }
     
-    NSDate *date = [NSDate dateWithTimeIntervalSince1970:(u_int64_t)params.ts/1000.0];
-    NSDateFormatter *dateFormatter=[[NSDateFormatter alloc] init];
-    [dateFormatter setDateFormat:@"HH:mm"];
     
-    NSDateFormatter *dateFormatter1=[[NSDateFormatter alloc] init];
     MesiboProfile *mp = params.profile;
     if(params.groupProfile)
         mp = params.groupProfile;
     
     if(mp == nil ) {
         NSLog(@"NIL PROFILE - MUST NOT HAPPEN");
-        NSLog(@" Crash %@ (message: %@)", [NSThread callStackSymbols], message);
-        //return;
+        //NSLog(@" Crash %@ (message: %@)", [NSThread callStackSymbols], message);
+        return;
     }
     
-    //depending on whether to show group or user in search results
-    /*
-     TBD, this is a bad implementation, the search results are shown based on
-     list of user profile and last message, so here entirely new profile is being allocated
-     along with new userData. MUST be fixed. We should also take care to not pass this profile anywhere
-     */
     if(YES && mIsMessageSearching) {
         NSLog(@"Searching");
         mp = [params.profile cloneProfile];
@@ -456,53 +492,27 @@
         }
     }
     
-    int days = [MesiboInstance daysElapsed:params.ts];
-    if(0 == days) {
-        [dateFormatter1 setDateFormat:@"HH:mm"];
-    } else {
-        // We need to fix date in Table to show yesterday etc, right now no space
-        [dateFormatter1 setDateFormat:@"dd/MM/yy"];
-    }
     
     UserData *oud = [UserData getUserDataFromProfile:mp];
     
-    [oud setLastMessage:message];
-    [oud setMessage:params.mid time:[dateFormatter1 stringFromDate:date] status:params.status deleted:[params isDeleted] msg:message];
+    [oud setMessage:params];
     
-    oud.messageStatus = params.status;
     
-    mTotalUnreadCount -= [oud getUnreadCount];
-    if(mTotalUnreadCount < 0)
-        mTotalUnreadCount = 0;
-    
-    if([MesiboInstance isReading:params]) {
-        [oud setUnreadCount:0];
-    }
-    else{
-        if(MESIBO_ORIGIN_DBSUMMARY == params.origin/* || MESIBO_ORIGIN_DBMESSAGE == params.origin */) {
-            [oud setUnreadCount:[mp getUnreadCount]];
-        }
-        else if(MESIBO_ORIGIN_REALTIME == params.origin){
-            [oud setUnreadCount:[oud getUnreadCount]+1];
-        }
-    }
-    
-    mTotalUnreadCount = [oud getUnreadCount];
-    
-    if(MESIBO_ORIGIN_REALTIME == params.origin) {
+    if([params isRealtimeMessage]) {
         [self updateNotificationBadge];
     }
     
-    // we will receive DB messages also so we can't avoid this
-    //create message map
-    if(YES || (!mIsMessageSearching && MESIBO_ORIGIN_DBSUMMARY != params.origin && MESIBO_ORIGIN_DBMESSAGE != params.origin)) {
+    if(YES || (!mIsMessageSearching && ![params isDbSummaryMessage] && ![params isDbMessage])) {
         for(int i=0; i< [mTableList count]; i++) {
             
             MesiboProfile *up = (MesiboProfile *)mTableList[i];
             UserData *ud = [UserData getUserDataFromProfile:up];
             
+            //TBD, if list in not reordered, we can only update a cell instead of table
             if([params compare:[ud getPeer] groupid:[ud getGroupId]]) {
                 [mTableList removeObjectAtIndex:i];
+                //[mTableList insertObject:params.profile atIndex:0];
+                //[_mUsersTableView reloadData];
                 break ;
             }
         }
@@ -510,16 +520,16 @@
     
     
     int count  = 0;
-    if(MESIBO_ORIGIN_DBSUMMARY == params.origin || MESIBO_ORIGIN_DBMESSAGE == params.origin)
+    if([params isDbSummaryMessage] || [params isDbMessage])
         count = (int) [mTableList count];
     
     [UserData getUserDataFromProfile:mp]; //initialize `other` right away as it's getting checked in onUserProfileUpdated
     [mTableList insertObject:mp atIndex:count];
     
-    if(MESIBO_ORIGIN_REALTIME == params.origin) {
+    if([params isRealtimeMessage]) {
         
         uint64_t ts = [MesiboInstance getTimestamp];
-                
+        
         if((ts - mTiUpdateTimestamp) > 2000) {
             [self refreshTable:nil];
             return;
@@ -539,7 +549,7 @@
     return ;
 }
 
--(void) updateUiIfLastMessage:(MesiboParams *)params {
+-(void) updateUiIfLastMessage:(MesiboMessageProperties *)params {
     if(![params isLastMessage]) return;
     [MesiboInstance runInThread:YES handler:^{
         [self refreshTable:nil];
@@ -547,110 +557,14 @@
     }];
 }
 
--(void) Mesibo_OnMessage:(MesiboMessage *)message {
-    
-}
-
--(void) Mesibo_OnMessage:(MesiboParams *)params data:(NSData *)data {
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
-        return;
-    
-    if([params isCall] && ![params isMissedCall]) {
-        [self updateUiIfLastMessage:params];
-        return;
-    }
-    
-    if(params.groupid && !params.groupProfile) {
-        [self updateUiIfLastMessage:params];
-        return;
-    }
-    
-    UserData *ud = [UserData getUserDataFromParams:params];
-    if(ud)
-        [ud clearTyping];
-    
-    if(0 == [data length]) {
-        [self updateUiIfLastMessage:params];
-        return;
-    }
-    
-    NSString *msg = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-    
-    if([params isMissedCall]) {
-        
-        if([params isVideoCall]) {
-            msg = MISSEDVIDEOCALL_STRING;
-        } else {
-            msg = MISSEDVOICECALL_STRING;
-        }
-        
-    }else if([params isDeleted]) {
-        msg = MESSAGEDELETED_STRING;
-    }
-    
-    [self addNewMessage:params message:msg];
-    [self updateUiIfLastMessage:params];
-}
-
--(void) Mesibo_onFile:(MesiboParams *)params file:(MesiboFileInfo *)file {
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
-        return;
-    
-    NSString *fileType = ATTACHMENT_STRING;
-    if(MESIBO_FILETYPE_IMAGE == file.type)
-        fileType = IMAGE_STRING;
-    else if(MESIBO_FILETYPE_VIDEO == file.type)
-        fileType = VIDEO_STRING;
-    else if(MESIBO_FILETYPE_LOCATION == file.type)
-        fileType = LOCATION_STRING;
-    
-    [self addNewMessage:params message:fileType];
-    [self updateUiIfLastMessage:params];
-}
-
--(void) Mesibo_onLocation:(MesiboParams *)params location:(MesiboLocation *)location {
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
-        return;
-    if(!params) return; // if location update
-    [self addNewMessage:params message:LOCATION_STRING];
-    [self updateUiIfLastMessage:params];
-}
-
--(void) Mesibo_OnMessageStatus:(MesiboParams *)params {
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
-        return;
-    
-    if(MESIBO_ORIGIN_REALTIME == params.origin && params.groupid && [params isMessageStatusInProgress]) return;
-    
-    for(int j=0;j<[mUsersList count];j++) {
-        
-        MesiboProfile *personz =[mUsersList objectAtIndex:j];
-        UserData *oud = (UserData *) [personz getUserData];
-        
-        if(params.mid == [oud getMid]) {
-            
-            oud.messageStatus = params.status;
-            [oud setDeleted:[params isDeleted]];
-            
-            
-            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:j inSection:0];
-            UITableViewCell* cell = [_mUsersTableView cellForRowAtIndexPath:indexPath];
-            
-            UILabel *pInfo = (UILabel*)[cell viewWithTag:102];
-            [self setUserRow:[MesiboImage getStatusIcon:params.status] WithText:[oud getLastMessage] OnLabel:pInfo];
-            
-        }
-    }
-}
-
--(void) Mesibo_OnConnectionStatus:(int)status {
-    //NSLog(@"OnConnectionStatus status: %d", status);
+-(void) updateConnectionStatus:(NSInteger)status {
+    NSLog(@"UI: OnConnectionStatus status: %d", status);
     status = [MesiboInstance getConnectionStatus];
     
     if(status == MESIBO_STATUS_ONLINE) {
         NSString *title = [self getAppTitle];
         self.title = title ;
-        mUserNameLbl.text = title;
+        mScreen.title.text = title;
         
         [self updateContactsSubTitle:mMesiboUIOptions.onlineIndicationTitle];
     } else if(status == MESIBO_STATUS_CONNECTING) {
@@ -667,33 +581,91 @@
     }
 }
 
-
--(void) Mesibo_onActivity:(MesiboParams *)params activity:(int)activity {
-    if(MESIBO_ACTIVITY_TYPING != activity && MESIBO_ACTIVITY_TYPINGCLEARED != activity && MESIBO_ACTIVITY_LEFT != activity) {
+-(void) Mesibo_onMessage:(MesiboMessage *) msg {
+    if(_mMode != USERLIST_MODE_MESSAGES)
+        return;
+    
+    if(([msg isCall] && ![msg isMissedCall]) || [msg isEndToEndEncryptionStatus]) {
+        [self updateUiIfLastMessage:msg];
         return;
     }
     
-    if(!params.profile)
+    if(msg.groupid && !msg.groupProfile) {
+        [self updateUiIfLastMessage:msg];
+        return;
+    }
+    
+    [self addNewMessage:msg];
+    [self updateUiIfLastMessage:msg];
+}
+
+-(void) Mesibo_onMessageUpdate:(MesiboMessage *)message {
+    [self Mesibo_onMessageStatus:message];
+}
+
+-(void) Mesibo_onMessageStatus:(MesiboMessage *)msg {
+    if(_mMode != USERLIST_MODE_MESSAGES)
         return;
     
-    if(params.groupid && !params.groupProfile)
+    if([msg isRealtimeMessage] && msg.groupid && [msg isMessageStatusInProgress]) return;
+    
+    for(int j=0;j<[mUsersList count];j++) {
+        
+        MesiboProfile *personz =[mUsersList objectAtIndex:j];
+        UserData *oud = (UserData *) [personz getUserData];
+        
+        if(msg.mid == [oud getMid]) {
+            
+            [oud setMessage:msg];
+            
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:j inSection:0];
+            UITableViewCell* cell = [_mUsersTableView cellForRowAtIndexPath:indexPath];
+            
+            UILabel *pInfo = (UILabel*)[cell viewWithTag:102];
+            [self setUserRow:[oud getMessage] OnLabel:pInfo];
+            
+        }
+    }
+}
+
+-(void) Mesibo_onConnectionStatus:(NSInteger)status {
+    if(status == MESIBO_STATUS_ONLINE) {
+        if(!mFirstOnline && [MesiboInstance getLastProfileUpdateTimestamp] > mRefreshTs) {
+            [self showUserList:YES];
+        }
+        
+        mFirstOnline = YES;
+    }
+    [self updateConnectionStatus:status];
+}
+
+-(void) Mesibo_onPresence:(MesiboPresence *)message {
+    int activity = message.presence;
+    
+    if(MESIBO_PRESENCE_TYPING != activity && MESIBO_PRESENCE_TYPINGCLEARED != activity && MESIBO_PRESENCE_LEFT != activity) {
+        return;
+    }
+    
+    if(!message.profile)
         return;
     
-    MesiboProfile *mp = params.profile;
-    if(params.groupProfile)
-        mp = params.groupProfile;
+    if(message.groupid && !message.groupProfile)
+        return;
+    
+    MesiboProfile *mp = message.profile;
+    if(message.groupProfile)
+        mp = message.groupProfile;
     
     UserData *ud = [UserData getUserDataFromProfile:mp];
     
-    if(MESIBO_ACTIVITY_LEFT == activity)
-        [ud clearTyping];
+    if(MESIBO_PRESENCE_LEFT == activity) {
+    }
     else
-        [ud setTyping:(params.groupid > 0)?params.profile:nil];
+        [ud setTyping:(message.groupid > 0)?message.profile:nil];
     
     [self refreshTable:[ud getUserListPosition]];
     
 }
-
 
 
 -(void) updateContacts:(MesiboProfile *) profile {
@@ -717,10 +689,13 @@
         
         MesiboProfile *mp = [self getProfileAtIndexPath:indexPath];
         
-        // this can only happen when position moved or table refreshd
         if(mp && mp != profile) {
-            NSLog(@"====================== Profile at indexpath mismatched\n");
             return;
+        }
+        
+        if([mp isDeleted]) {
+            [mTableList removeObject:mp];
+            indexPath = nil;
         }
         
         [self refreshTable:indexPath];
@@ -749,7 +724,7 @@
 }
 
 -(void) Mesibo_onGroupMembers:(MesiboProfile *) groupProfile members:(NSArray *)members {
-    if(_mNewContactChooser != USERLIST_EDIT_GROUP_MODE)
+    if(_mMode != USERLIST_MODE_EDITGROUP)
         return;
     
     [mGroupMembers removeAllObjects];
@@ -769,27 +744,27 @@
     
     if(status.length == 0) {
         
-        mUserStatusLbl.hidden = YES;
-        mUserStatusLbl.text = @"";
+        mScreen.subtitle.hidden = YES;
+        mScreen.subtitle.text = @"";
         
         [UIView animateWithDuration:0.2 delay:0.0 options: UIViewAnimationOptionCurveEaseIn
                          animations:^{
-            mUserNameLbl.frame = mHideUserStatusFrm;
+            mScreen.title.frame = mHideUserStatusFrm;
         }
                          completion:^(BOOL finished){
         }];
         
     }else {
         
-        mUserStatusLbl.hidden = NO;
+        mScreen.subtitle.hidden = NO;
         [UIView animateWithDuration:0.2 delay:0.0 options: UIViewAnimationOptionCurveEaseOut
                          animations:^{
-            mUserNameLbl.frame = mShowUserStatusFrm;
+            mScreen.title.frame = mShowUserStatusFrm;
         }
                          completion:^(BOOL finished){
             
-            mUserStatusLbl.hidden = NO;
-            mUserStatusLbl.text = status;
+            mScreen.subtitle.hidden = NO;
+            mScreen.subtitle.text = status;
             
         }];
         
@@ -813,33 +788,27 @@
 
 
 - (void) showUserList:(BOOL)animated {
+    mRefreshTs = [MesiboInstance getTimestamp];
+    
     int b = [MesiboInstance getConnectionStatus];
-    [self Mesibo_OnConnectionStatus:b];
+    [self updateConnectionStatus:b];
     
-    [MesiboCommonUtils setNavigationBarColor:self.navigationController.navigationBar color:mPrimaryColor];
-    
-    if(_mNewContactChooser == USERLIST_MESSAGE_MODE) {
-        mTotalUnreadCount = 0;
+    if(_mMode == USERLIST_MODE_MESSAGES) {
         [mUsersList removeAllObjects];
+        
         [self.tableView reloadData];
         
         [MesiboInstance addListener:self];
         
         if(mReadSession)
-            [mReadSession endSession];
+            [mReadSession stop];
         
-        // end all sessions so that they do not send read receipts
         [MesiboReadSession endAllSessions];
         
-        mReadSession = [MesiboReadSession new];
-        [mReadSession initSession:nil groupid:0 query:nil delegate:self];
+        mReadSession = [[MesiboReadSession alloc] initWith:self];
         [mReadSession enableSummary:YES];
         
-        int rc = [mReadSession read:USERLIST_READ_MESSAGE_COUNT];
-        if(0 == rc) {
-            
-        }
-        
+        int rc = [mReadSession read:mMesiboUIOptions.mUserListMaxRows];
     }else {
         
         
@@ -855,25 +824,23 @@
                 
                 if([profile getGroupId] == 0  && (nil == [profile getAddress] || [profile getAddress].length == 0 ))
                     [mUsersList removeObject:profile];
-                else if(_mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
+                else if(_mMode == USERLIST_MODE_GROUPS || _mMode == USERLIST_MODE_EDITGROUP) {
                     if([profile getGroupId] > 0)
                         [mUsersList removeObject:profile];
-                    
                 }
             }
         }
         
         
-        if(_mNewContactChooser == USERLIST_CONTACTS_MODE && [mMesiboUIOptions.createGroupTitle length] > 0) {
+        if(_mMode == USERLIST_MODE_CONTACTS && [mMesiboUIOptions.createGroupTitle length] > 0) {
             mp = [[MesiboProfile alloc] init];
             [mp setName:mMesiboUIOptions.createGroupTitle];
             NSString *imageFile = [[MesiboCommonUtils getBundle] pathForResource :[NSString stringWithFormat:@"group"] ofType:@"png"];
             [mp setImageFromFile:imageFile];
             [mp setLookedup:YES];
-
-            UserData *od = [[UserData alloc] init];
-            od.lastMessage=CREATE_NEW_GROUP_DISCRIPTION;
-            [od setUnreadCount:0];
+            
+            UserData *od = [UserData new];
+            [od setTextMessage:CREATE_NEW_GROUP_DISCRIPTION];
             [od setFixedImage:YES];
             [od setThumbnail:[MesiboImage getDefaultGroupImage]];
             [mp setUserData:od];
@@ -881,7 +848,7 @@
             [mUsersList insertObject:mp atIndex:0];
         }
         
-        if(_mNewContactChooser == USERLIST_FORWARD_MODE  ) {
+        if(_mMode == USERLIST_MODE_FORWARD  ) {
             
             [mUtilityArray removeAllObjects];
             [mCommonNFilterArray removeAllObjects];
@@ -891,13 +858,12 @@
             
         }
         
-        if(mGroupMembers && mGroupMembers.count > 0 && (_mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE)) {
+        if(mGroupMembers && mGroupMembers.count > 0 && (_mMode == USERLIST_MODE_GROUPS || _mMode == USERLIST_MODE_EDITGROUP)) {
             for(int i=0; i < mGroupMembers.count;  i++) {
                 MesiboProfile *profile= [mGroupMembers objectAtIndex:i];
                 [profile setMark:YES];
             }
             
-            // when we return from createNewGroup, it may again pass the same
             if(mUtilityArray != mGroupMembers)
                 [mUtilityArray removeAllObjects];
             
@@ -914,20 +880,19 @@
 }
 
 -(IBAction)barButtonBackPressed:(id)sender {
-    if(_mNewContactChooser == USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
+    if(_mMode == USERLIST_MODE_FORWARD || _mMode == USERLIST_MODE_GROUPS || _mMode == USERLIST_MODE_EDITGROUP) {
         for(int i=0;  i< mUsersList.count; i++) {
             MesiboProfile *profile= [mUsersList objectAtIndex:i];
             [profile setMark:NO];
             
         }
     }
-   
-    if(_mNewContactChooser == USERLIST_MESSAGE_MODE && self.parentViewController && !self.parentViewController.navigationController) {
+    
+    if(_mMode == USERLIST_MODE_MESSAGES && self.parentViewController && !self.parentViewController.navigationController) {
         [self dismissViewControllerAnimated:YES completion:nil];
         return;
     }
-   
-    //[self dismissViewControllerAnimated:YES completion:nil];
+    
     [self.navigationController popViewControllerAnimated:YES];
     
 }
@@ -941,8 +906,7 @@
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     
-    // Return the number of rows in the section.
-    if(_mNewContactChooser == USERLIST_FORWARD_MODE || USERLIST_EDIT_GROUP_MODE == _mNewContactChooser) {
+    if(_mMode == USERLIST_MODE_FORWARD || USERLIST_MODE_EDITGROUP == _mMode) {
         if (section==0)
             return  [mUtilityArray count];
         else
@@ -961,12 +925,11 @@
         return 0;
 }
 
-- (void)filterContentForSearchText:(NSString*)searchText scope:(NSString*)scope
-{
+- (void)filterContentForSearchText:(NSString*)searchText scope:(NSString*)scope {
     
     NSPredicate *resultPredicate = [NSPredicate predicateWithFormat:@"name contains[c] %@", searchText];
     
-    if(_mNewContactChooser == USERLIST_FORWARD_MODE  ) {
+    if(_mMode == USERLIST_MODE_FORWARD  ) {
         if(mMesiboUIOptions.showRecentInForward)
             mUtilityArray = [[[MesiboInstance getRecentProfiles] filteredArrayUsingPredicate:resultPredicate] mutableCopy];
         mCommonNFilterArray = [[mUsersList filteredArrayUsingPredicate:resultPredicate] mutableCopy];
@@ -980,23 +943,21 @@
 - (void)updateSearchResultsForSearchController:(UISearchController *)aSearchController {
     
     NSString *searchString = aSearchController.searchBar.text;
-    //NSLog(@"searchString=%@", searchString);
     [self filterContentForSearchText:searchString
                                scope:[[self.searchController.searchBar scopeButtonTitles]
                                       objectAtIndex:[self.searchController.searchBar
                                                      selectedScopeButtonIndex]]];
     
-    if(![searchString isEqualToString:@""] && _mNewContactChooser==USERLIST_MESSAGE_MODE) {
+    if(![searchString isEqualToString:@""] && _mMode==USERLIST_MODE_MESSAGES) {
         mIsMessageSearching = YES;
         [mCommonNFilterArray removeAllObjects];
-        //Don't set SUMMARY flag for search
+        
+        //Do not set SUMMARY flag for search
         if(mReadSession)
             [mReadSession stop];
         
-        mReadSession = [MesiboReadSession new];
-        [mReadSession initSession:nil groupid:0 query:searchString delegate:self];
-        
-        [mReadSession read:50];
+        mReadSession = [[MesiboReadSession alloc] initWith:self];
+        [mReadSession read:100];
         
     }else {
         mIsMessageSearching = NO;
@@ -1013,6 +974,7 @@
     
     mIsMessageSearching = NO;
     
+    MesiboUiDefaults *opt = [MesiboUI getUiDefaults];
     
     [self.searchController setActive:NO];
     
@@ -1023,15 +985,22 @@
     mCommonNFilterArray = [mUsersList mutableCopy];
     
     [self refreshTable];
-    //[self.searchController setActive:NO];
     
 }
 
 -(void)searchBarSearchButtonClicked:(UISearchBar *)searchBar {
-    // we are already seraching as user types, so search button is redundant
 }
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+    if(_mUiDelegate) {
+        MesiboUserListRow *mrow = [self mesiboRowForIndexPath:indexPath];
+        CGFloat height = [_mUiDelegate MesiboUI_onGetCustomRowHeight:mScreen row:mrow];
+        
+        if(height >= 0) {
+            return height;
+        }
+    }
+    
     return 76;
 }
 
@@ -1044,8 +1013,14 @@
     
     [super viewWillAppear:animated];
     
-    [self.searchController setActive:NO];
     
+    [MesiboCommonUtils setNavigationBarColor:self.navigationController.navigationBar color:mPrimaryColor];
+    
+    if([_mUiDelegate respondsToSelector:@selector(MesiboUI_onShowScreen:)]) {
+        [_mUiDelegate MesiboUI_onShowScreen:mScreen];
+    }
+    
+    [self.searchController setActive:NO];
     [self showUserList:animated];
     
 }
@@ -1054,7 +1029,15 @@
     
     [MesiboInstance setAppInForeground:self screenId:0 foreground:YES];
     int b = [MesiboInstance getConnectionStatus];
-    [self Mesibo_OnConnectionStatus:b];
+    [self updateConnectionStatus:b];
+    
+    // UI sometime not setting the status after launching, need to be investigated
+    [MesiboInstance queueInThread:YES delay:1000 handler:^{
+        int b = [MesiboInstance getConnectionStatus];
+        if(b == MESIBO_STATUS_ONLINE)
+            [self updateConnectionStatus:b];
+    }];
+    
     NSLog(@"viewDidAppear: userviewcontroller: %d", b);
     
 }
@@ -1066,7 +1049,7 @@
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
 {
     
-    if(_mNewContactChooser == USERLIST_FORWARD_MODE || USERLIST_EDIT_GROUP_MODE == _mNewContactChooser) {
+    if(_mMode == USERLIST_MODE_FORWARD || USERLIST_MODE_EDITGROUP == _mMode) {
         
         if(mUtilityArray.count==0)
             return 0;
@@ -1098,16 +1081,17 @@
     view.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     
     UILabel *label = [[UILabel alloc] initWithFrame:frame];
+    MesiboUiDefaults *opt = [MesiboUI getUiDefaults];
     
-    if(_mNewContactChooser == USERLIST_FORWARD_MODE || USERLIST_EDIT_GROUP_MODE == _mNewContactChooser) {
+    if(_mMode == USERLIST_MODE_FORWARD || USERLIST_MODE_EDITGROUP == _mMode) {
         if(section==0) {
-            if(_mNewContactChooser == USERLIST_FORWARD_MODE)
-                label.text = RECENT_USERS_STRING;
+            if(_mMode == USERLIST_MODE_FORWARD)
+                label.text = opt.recentUsersTitle;
             else
-                label.text = GROUP_MEMBERS_STRING;
+                label.text = opt.groupNotMemberTitle;
             
         } else {
-            label.text = ALL_USER_LIST_STRING;
+            label.text = opt.allUsersTitle;
             
         }
         
@@ -1160,14 +1144,13 @@
 
 #pragma mark - Table view data source
 
--(void) updateCell:(UITableViewCell *)cell index:(NSIndexPath *)indexPath {
+-(void) updateCell:(UITableViewCell *)cell index:(NSIndexPath *)indexPath mrow:(MesiboUserListRow *) mrow{
     MesiboProfile *mp = [self getProfileAtIndexPath:indexPath];
     
     if(!mp) {
-        NSLog(@"Nil profile in updateCell");
         return;
     }
-   
+    
     UILabel *pName = (UILabel*)[cell viewWithTag:101];
     
     NSString *name = [mp getName];
@@ -1193,20 +1176,19 @@
         [ud setThumbnail:profileImage];
     }
     
-    
     [pImage setImage:profileImage];
     pImage.layer.cornerRadius = pImage.frame.size.width/2;
     pImage.layer.masksToBounds = YES;
-    //pImage.image = [self imageNamed:mp.picturePath];
     NSString *messageDetail ;
     
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE) {
+    UILabel *pInfo = (UILabel*)[cell viewWithTag:102];
+    UILabel *alertInfo = (UILabel*)[cell viewWithTag:105];
+    UILabel *timeDetails = (UILabel*)[cell viewWithTag:104];
+    
+    if(_mMode != USERLIST_MODE_MESSAGES) {
         
-        UILabel *pInfo = (UILabel*)[cell viewWithTag:102];
         pInfo.text = @"";
-        //[self setImageIcon:nil WithText:mp.status OnLabel:pInfo];
-        UILabel *alertInfo = (UILabel*)[cell viewWithTag:105];
-        UILabel *timeDetails = (UILabel*)[cell viewWithTag:104];
+        
         alertInfo.alpha = 0;
         timeDetails.alpha=0;
         if([mp getStatus])
@@ -1215,22 +1197,16 @@
         
     }else {
         
-        //messageDetail = ((OtherUserData *)(mp.other)).lastMessage;
         UserData *oud = [UserData getUserDataFromProfile:mp];
         messageDetail = [oud getLastMessage];
         
-        UILabel *timeDetails = (UILabel*)[cell viewWithTag:104];
         timeDetails.text = [oud getTime];
-        
-        UILabel *alertInfo = (UILabel*)[cell viewWithTag:105];
         
         int newMessage = [oud getUnreadCount];
         
-        //newMessage = 1;
         if(newMessage) {
             alertInfo.hidden = NO;
             [alertInfo layoutIfNeeded];
-            //int radius = alertInfo.frame.size.height/2;
             alertInfo.layer.cornerRadius = alertInfo.frame.size.height/2;
             alertInfo.layer.masksToBounds = YES;
             alertInfo.text = [NSString stringWithFormat:@"%d",newMessage];
@@ -1241,14 +1217,12 @@
         
         int status = [oud getMessageStatus];
         
-        UILabel *pInfo = (UILabel*)[cell viewWithTag:102];
-        
         BOOL typing = [ud isTyping];
         
         if(typing) {
             [pInfo setTextColor:mTypingColor];
             
-            NSString *typingText = STATUS_TYPING;
+            NSString *typingText = mMesiboUIOptions.typingIndicationTitle;
             MesiboProfile *typingProfile = [ud getTypingProfile];
             
             if(typingProfile) {
@@ -1256,21 +1230,21 @@
                 if(!name)
                     name = [typingProfile getAddress];
                 
-                typingText = [NSString stringWithFormat:@"%@ is %@", name, STATUS_TYPING];
+                typingText = [NSString stringWithFormat:@"%@ is %@", name, mMesiboUIOptions.typingIndicationTitle];
             }
             
             [pInfo setText:typingText];
             
         } else {
             [pInfo setTextColor:mStatusColor];
-            [self setUserRow:[MesiboImage getStatusIcon:status] WithText:messageDetail OnLabel:pInfo];
+            [self setUserRow:[oud getMessage] OnLabel:pInfo];
         }
         
         [pInfo sizeToFit];
         
     }
     
-    if(_mNewContactChooser ==USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
+    if(_mMode ==USERLIST_MODE_FORWARD || _mMode == USERLIST_MODE_GROUPS || _mMode == USERLIST_MODE_EDITGROUP) {
         
         if(cell.accessoryView == nil) {
             
@@ -1292,26 +1266,80 @@
                 accView.image = [MesiboImage getUnCheckedImage];
             }
         }
-        
+    }
+    
+    [pName sizeToFit];
+    [pInfo sizeToFit];
+    
+    int x = pName.frame.origin.y;
+    int x1 = pInfo.frame.origin.y;
+    int x2 = pImage.frame.origin.y;
+    int height = pName.frame.size.height;
+    height += pInfo.frame.size.height;
+    int iheight = pImage.frame.size.height;
+    
+    if(iheight > height)
+        height = iheight;
+    
+    
+    if(mrow) {
+        mrow.row = cell;
+        mrow.name = pName;
+        mrow.subtitle = pInfo;
+        mrow.timestamp = timeDetails;
+        mrow.image = pImage;
+        [_mUiDelegate MesiboUI_onUpdateRow:mScreen row:mrow last:YES];
     }
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    UITableViewCell *cell;
-    static NSString * resueIdentifier = @"cells";
+-(MesiboUserListRow *) mesiboRowForIndexPath:(NSIndexPath *)indexPath {
+    if(!_mUiDelegate) return nil;
     
-    cell = [self.tableView dequeueReusableCellWithIdentifier:resueIdentifier];
-    if(cell==nil) {
-        cell   = [[UITableViewCell alloc]
-                  initWithStyle:UITableViewCellStyleDefault
-                  reuseIdentifier:resueIdentifier];
+    MesiboProfile *mp = [self getProfileAtIndexPath:indexPath];
+    
+    if(!mp) return nil;
+    
+    MesiboUserListRow *mrow = mMessageRow;
+    [mrow reset];
+    mrow.profile = mp;
+    
+    if(_mMode == USERLIST_MODE_MESSAGES) {
+        
+        UserData *oud = [UserData getUserDataFromProfile:mp];
+        mrow.message = [oud getMessage];
+    }
+    
+    return mrow;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    
+    MesiboUserListRow *mrow = [self mesiboRowForIndexPath:indexPath];
+    if(mrow) {
+        UITableViewCell *cell = [_mUiDelegate MesiboUI_onGetCustomRow:mScreen row:mrow];
+        
+        if(cell)
+            return cell;
+    }
+    
+    static NSString * resueIdentifier = @"cells";
+    UITableViewCell *cell = [self.tableView dequeueReusableCellWithIdentifier:resueIdentifier];
+    if(!cell) {
+        cell = [[UITableViewCell alloc]
+                initWithStyle:UITableViewCellStyleDefault
+                reuseIdentifier:resueIdentifier];
         
     }
     
     UIColor *altCellColor = [UIColor whiteColor];
-        cell.backgroundColor = altCellColor;
+    if(mMesiboUIOptions.userListBackgroundColor > 0) {
+        altCellColor = [UIColor getColor:mMesiboUIOptions.userListBackgroundColor];
+    }
     
-    [self updateCell:cell index:indexPath];
+    cell.backgroundColor = altCellColor;
+    
+    [self updateCell:cell index:indexPath mrow:mrow];
+    
     
     return cell;
 }
@@ -1320,37 +1348,36 @@
     return [string stringByTrimmingCharactersInSet: [NSCharacterSet whitespaceAndNewlineCharacterSet]];
 }
 
-//TBD, here some crashs
--(void)setUserRow:(UIImage*)statusImage WithText:(NSString*)strText OnLabel:(UILabel *)lbl{
+-(void)setUserRow:(MesiboMessage *)m OnLabel:(UILabel *)lbl{
+    int status = [m getStatus];
+    UIImage *statusImage = [MesiboImage getStatusIcon:status];
+    NSString *strText = m.message;
+    
     if(!strText) {
         strText = @"";
     }
     
-    if(!lbl) {
-        NSLog(@"Should not happen");
-        return;
-    }
+    if(!lbl) return;
     
     NSTextAttachment *messageStatus = [[NSTextAttachment alloc] init];
     NSTextAttachment *messageType = [[NSTextAttachment alloc] init];
     
-    NSString *text = [self trim:strText];
-    if([text isEqualToString:[self trim:MESSAGEDELETED_STRING]]) {
+    if([m isDeleted]) {
         messageType.image = [MesiboImage getDeletedMessageIcon];
-        strText = MESSAGEDELETED_STRING;
+        strText = mMesiboUIOptions.deletedMessageTitle;
         statusImage = nil;
     }
-    else if([text isEqualToString:[self trim:IMAGE_STRING]])
+    else if([m hasImage])
         messageType.image = [MesiboImage imageNamed:@"ic_photo_18pt" color:USERLIST_ICON_COLOR];
-    else if([text isEqualToString:[self trim:VIDEO_STRING]])
+    else if([m hasVideo])
         messageType.image = [MesiboImage imageNamed:@"ic_videocam_18pt" color:USERLIST_ICON_COLOR];
-    else if([text isEqualToString:[self trim:ATTACHMENT_STRING]])
+    else if([m hasDocument])
         messageType.image = [MesiboImage imageNamed:@"ic_attach_file_18pt" color:USERLIST_ICON_COLOR];
-    else if([text isEqualToString:[self trim:LOCATION_STRING]])
+    else if([m hasLocation])
         messageType.image = [MesiboImage imageNamed:@"ic_location_on_18pt" color:USERLIST_ICON_COLOR];
-    else if([text isEqualToString:[self trim:MISSEDVIDEOCALL_STRING]])
+    else if([m isMissedCall] && [m isVideoCall])
         messageType.image = [MesiboImage getMissedCallIcon:YES];
-    else if([text isEqualToString:[self trim:MISSEDVOICECALL_STRING]])
+    else if([m isMissedCall] && ![m isVideoCall])
         messageType.image = [MesiboImage getMissedCallIcon:NO];
     
     if(messageType.image) {
@@ -1382,20 +1409,21 @@
     NSMutableAttributedString *myString = nil;
     if(newString)
         myString= [[NSMutableAttributedString alloc] initWithString:newString];
-    //NSMutableAttributedString *space= [[NSMutableAttributedString alloc] initWithString:@"\u00a0\u00a0"];
-    //NSMutableAttributedString *space= [[NSMutableAttributedString alloc] initWithString:@"\u00a0"];
+
     NSMutableAttributedString *space= [[NSMutableAttributedString alloc] initWithString:@""];
-    //NSMutableAttributedString *space= [[NSMutableAttributedString alloc] initWithString:@"\u00a0"];
     
     if(statusImage) {
-        [finalString appendAttributedString:attachmentString ];
-        [finalString appendAttributedString:space ];
+        [finalString appendAttributedString:attachmentString];
+        [finalString appendAttributedString:space];
     }
     
     if(messageType.image) {
-        [finalString appendAttributedString:subAttachmentString ];
-        [finalString appendAttributedString:space ];
+        [finalString appendAttributedString:subAttachmentString];
+        [finalString appendAttributedString:space];
     }
+    
+    if(statusImage || messageType.image)
+        [finalString appendAttributedString:space];
     
     [finalString appendAttributedString:myString];
     if(lbl)
@@ -1407,7 +1435,7 @@
     
     @try {
         
-        if(_mNewContactChooser == USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE ) {
+        if(_mMode == USERLIST_MODE_FORWARD || _mMode == USERLIST_MODE_EDITGROUP ) {
             
             if(indexPath.section == 0) {
                 if(mUtilityArray.count > indexPath.row)
@@ -1434,11 +1462,18 @@
         }
     } @catch(NSException *e) {
         mp = nil;
-        NSLog(@"Exception getProfileAtIndexPath: mode %d searching %d section %d %@", _mNewContactChooser, [self isSearching]?1:0, (int) indexPath.section, e);
+        NSLog(@"Exception getProfileAtIndexPath: mode %d searching %d section %d %@", _mMode, [self isSearching]?1:0, (int) indexPath.section, e);
     }
     
     
     return mp;
+}
+
+-(void) showProfile:(MesiboProfile *) profile {
+    MesiboMessageScreenOptions *opts = [MesiboMessageScreenOptions new];
+    opts.profile = profile;
+    opts.listener = _mUiDelegateForMessageView;
+    [MesiboUI launchMessaging:self opts:opts];
 }
 
 
@@ -1446,7 +1481,7 @@
     
     MesiboProfile *mp = [self getProfileAtIndexPath:indexPath];
     
-    if(self.mNewContactChooser== USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
+    if(self.mMode== USERLIST_MODE_FORWARD || _mMode == USERLIST_MODE_GROUPS || _mMode == USERLIST_MODE_EDITGROUP) {
         
         UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
         UIImageView *accView = (UIImageView *)[cell.accessoryView viewWithTag:33];
@@ -1463,14 +1498,14 @@
     }
     
     if(mMesiboUIOptions.createGroupTitle && [[mp getName] isEqualToString:mMesiboUIOptions.createGroupTitle]){
-        [MesiboUIManager launchUserListViewcontroller:self  withChildViewController:[self.storyboard instantiateViewControllerWithIdentifier:@"UserListViewController"] withContactChooser:USERLIST_SELECTION_GROUP withForwardMessageData:nil withMembersList:nil withForwardGroupName:nil withForwardGroupid:0];
+        [MesiboUIManager launchUserListViewcontroller:self  withChildViewController:[self.storyboard instantiateViewControllerWithIdentifier:@"UserListViewController"] withContactChooser:USERLIST_MODE_GROUPS withForwardMessageData:nil withMembersList:nil withForwardGroupName:nil withForwardGroupid:0];
         return;
     }
     
-    // TBD, don't directly use mp as it may be locally allocated due to bad search implementation
     mp = [MesiboInstance getProfile:[mp getAddress] groupid:[mp getGroupId]];
     
-    [MesiboUIManager launchMessageViewController:self withUserData:mp uidelegate:_mUiDelegate];
+    [self showProfile:mp];
+    
     self.searchController.active = NO;
     
 }
@@ -1478,7 +1513,7 @@
 
 -(void)tableView:(UITableView *)tableView didDeSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     
-    if(self.mNewContactChooser==USERLIST_FORWARD_MODE || _mNewContactChooser == USERLIST_SELECTION_GROUP || _mNewContactChooser == USERLIST_EDIT_GROUP_MODE) {
+    if(self.mMode==USERLIST_MODE_FORWARD || _mMode == USERLIST_MODE_GROUPS || _mMode == USERLIST_MODE_EDITGROUP) {
         //cv.forwardedMesage = _fwdMessage;
         MesiboProfile *mp;
         if ([self isSearching]) {
@@ -1500,17 +1535,12 @@
 
 -(void) forwardToContact:(MesiboProfile *) profile {
     [profile setMark:NO];
-    MesiboParams *mesiboParamsUser = (MesiboParams *) [[MesiboParams alloc] init];
+    MesiboMessageProperties *mesiboParamsUser = (MesiboMessageProperties *) [[MesiboMessageProperties alloc] init];
     
-    if([profile getGroupId])
-        [mesiboParamsUser setGroup:[profile getGroupId]];
-    else
-        [mesiboParamsUser setPeer:[profile getAddress]];
-    
-    for(NSNumber *msgid in _fwdMessage) {
-        [MesiboInstance forwardMessage:mesiboParamsUser msgid:[MesiboInstance random] forwardid:[msgid unsignedLongLongValue]];
-    }
-    
+    MesiboMessage *m = [profile newMessage];
+    [m setForwarded:_forwardIds];
+    [m send];
+    return;
 }
 
 -(void) forwardMessageToContacts {
@@ -1523,7 +1553,6 @@
         if([profile isMarked]) {
             forwardTo = profile;
             [self forwardToContact:profile];
-            //NSArray *p = [MesiboInstance getRecentProfiles];
             count++;
         }
     }
@@ -1545,15 +1574,12 @@
         
         if(count > 1) {
             [self.navigationController popViewControllerAnimated:NO];
+            //[self dismissViewControllerAnimated:NO completion:nil];
             return;
         }
         
-        [MesiboUIManager launchMessageViewController:self withUserData:forwardTo uidelegate:_mUiDelegate];
-        
-        
-        
-        //[_mUsersTableView reloadData];
-        //[self.navigationController popViewControllerAnimated:YES];
+        [self showProfile:forwardTo];
+
         
     }
     
@@ -1573,7 +1599,6 @@
         }
     }
     
-    
     for(int i=0;  i< mUsersList.count; i++) {
         MesiboProfile *profile= [mUsersList objectAtIndex:i];
         if([profile isMarked]) {
@@ -1587,14 +1612,14 @@
         
     } else {
         
-        [MesiboUIManager launchCreatNewGroupController:self withMemeberProfiles:mSelectedMembers existingMembers:mGroupMembers  withGroupId:_mForwardGroupid modifygroup:(_mNewContactChooser == USERLIST_EDIT_GROUP_MODE) uidelegate:_mUiDelegate];
+        [MesiboUIManager launchCreateNewGroupController:self withMemeberProfiles:mSelectedMembers existingMembers:mGroupMembers  withGroupId:_mForwardGroupid modifygroup:(_mMode == USERLIST_MODE_EDITGROUP) uidelegate:_mUiDelegate];
         
     }
 }
 
 -(void) deleteConversation:(MesiboProfile *)mp indexPath:(NSIndexPath *)indexPath {
     
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE) {
+    if(_mMode != USERLIST_MODE_MESSAGES) {
         [mUsersList removeObjectAtIndex:indexPath.row];
         [_mUsersTableView beginUpdates];
         [_mUsersTableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationFade];
@@ -1602,7 +1627,6 @@
         
     } else {
         
-        // Delete  here
         [mUsersList removeObjectAtIndex:indexPath.row];
         if(mUsersList.count > 0) {
             [_mUsersTableView beginUpdates];
@@ -1616,39 +1640,56 @@
     
 }
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
-{
-    // Return the number of sections.
+-(NSInteger) numberOfSectionsInTableView:(UITableView *)tableView {
+    
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
     self.tableView.backgroundView = nil;
     
-    if(_mNewContactChooser == USERLIST_FORWARD_MODE || USERLIST_EDIT_GROUP_MODE == _mNewContactChooser ||  mIsMessageSearching) {
+    if(_mMode == USERLIST_MODE_FORWARD || USERLIST_MODE_EDITGROUP == _mMode ||  mIsMessageSearching) {
         int count = 0;
         count += (mUtilityArray.count > 0) ? 1:0;
         count += (mCommonNFilterArray.count > 0) ? 1:0;
         if(count > 0)
             return 2;
         
-    } else { //if (_mNewContactChooser == USERLIST_MESSAGE_MODE) {
+    } else { //if (_mNewContactChooser == USERLIST_MODE_MESSAGES) {
         if(mUsersList.count > 0)
             return 1;
     }
     
     
-    // Display a message when the table is empty
-    UILabel *messageLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height)];
+    int margin = (self.view.bounds.size.width*10)/100; // 10% on each side
+    UIView *marginView = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height)];
+    
+    marginView.backgroundColor = [UIColor clearColor];
+    
+    UILabel *messageLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height-1)];
+    [marginView addSubview:messageLabel];
     
     messageLabel.text = mMesiboUIOptions.emptyUserListMessage;
     if ([self isSearching])
-        messageLabel.text = SEARCH_IS_NOT_AVAILABLE;
+        messageLabel.text = mMesiboUIOptions.emptySearchListMessage;
     
     messageLabel.textColor = [UIColor getColor:mMesiboUIOptions.emptyUserListMessageColor];
     messageLabel.numberOfLines = 0;
     messageLabel.textAlignment = NSTextAlignmentCenter;
     messageLabel.font = mMesiboUIOptions.emptyUserListMessageFont;
+    
+    
+    UIFont * const font = [UIFont systemFontOfSize:17 weight:UIFontWeightRegular]; // Change to your own label font.
+    
+    CGSize const size = CGSizeMake(INFINITY, 18); // 18 is height of label.
+    
+    CGFloat const textWidth = [messageLabel.text boundingRectWithSize:size options:NSStringDrawingUsesLineFragmentOrigin attributes:@{NSFontAttributeName: messageLabel.font} context:nil].size.width;
+    
+    messageLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [messageLabel.widthAnchor constraintEqualToAnchor:marginView.widthAnchor constant:-50].active = YES;
+    [messageLabel.centerXAnchor constraintEqualToAnchor:marginView.centerXAnchor].active = YES;
+    [messageLabel.centerYAnchor constraintEqualToAnchor:marginView.centerYAnchor].active = YES;
+    
     [messageLabel sizeToFit];
     
-    self.tableView.backgroundView = messageLabel;
+    self.tableView.backgroundView = marginView;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     
     return 0;
@@ -1656,7 +1697,7 @@
 
 - (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
     // Return YES if you want the specified item to be editable.
-    if(_mNewContactChooser==USERLIST_FORWARD_MODE || USERLIST_EDIT_GROUP_MODE == _mNewContactChooser) {
+    if(_mMode==USERLIST_MODE_FORWARD || USERLIST_MODE_EDITGROUP == _mMode) {
         return NO;
     }
     
@@ -1667,12 +1708,32 @@
 -(NSArray *)tableView:(UITableView *)tableView editActionsForRowAtIndexPath:(NSIndexPath *)indexPath {
     
     __weak __typeof(self) weakSelf = self;
-    UITableViewRowAction *deleteRow = [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDefault title:DELETE_TITLE_STRING handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
+    
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    
+    UITableViewRowAction *unreadRow = [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDefault title:opts.unreadTitle handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
         __typeof(self) strongSelf = weakSelf;
         MesiboProfile *mp = [mUsersList objectAtIndex:indexPath.row];
-        NSString *prompt = [NSString stringWithFormat:DELETE_ALERT_MESSAGES, [mp getNameOrAddress:@"+"]];
         
-        [MesiboUIAlerts showPrompt:prompt withTitle:DELETE_ALERT_TITLE actionTitle:DELETE_TITLE_STRING alertStyle:NO completion:^(BOOL result) {
+        [mp unread];
+        [self refreshTable];
+        return;
+        
+    }];
+    
+    unreadRow.backgroundColor = [UIColor getColor:opts.unreadButtonColor];
+    
+    UITableViewRowAction *deleteRow = [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDefault title:opts.deleteTitle handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
+        __typeof(self) strongSelf = weakSelf;
+        MesiboProfile *mp = [mUsersList objectAtIndex:indexPath.row];
+        
+        
+        
+        NSString *prompt = [NSString stringWithFormat:opts.deleteAlertTitle, [mp getNameOrAddress:@"+"]];
+        
+        
+        
+        [MesiboUIAlerts showPrompt:prompt withTitle:opts.deleteMessagesTitle actionTitle:opts.deleteTitle cancelTitle:opts.cancelTitle alertStyle:NO completion:^(BOOL result) {
             if(!result) return;
             
             // if new messages received, row may have changed, don't delete in that case
@@ -1687,12 +1748,29 @@
         
     }];
     
-    deleteRow.backgroundColor = [UIColor redColor];
+    deleteRow.backgroundColor = [UIColor getColor:opts.deleteButtonColor];
     
-    if(_mNewContactChooser != USERLIST_MESSAGE_MODE)
+    //disabled for now till we add Archive option
+#if 0
+    UITableViewRowAction *archive = [UITableViewRowAction rowActionWithStyle:UITableViewRowActionStyleDefault title:ARCHIVE_TITLE_STRING handler:^(UITableViewRowAction *action, NSIndexPath *indexPath) {
+        
+        
+        
+    }];
+    archive.backgroundColor = [UIColor colorWithRed:0.188 green:0.514 blue:0.984 alpha:1];
+    
+    
+    if(_mNewContactChooser != USERLIST_MODE_MESSAGES)
+        return @[deleteRow]; //return @[], we don't want to
+    else
+        return @[deleteRow, archive];
+    
+#else
+    if(_mMode != USERLIST_MODE_MESSAGES)
         return @[]; // we don't allow deleting contact, TBD, this should be customizable
     else
-        return @[deleteRow];
+        return @[unreadRow, deleteRow];
+#endif
     
 }
 

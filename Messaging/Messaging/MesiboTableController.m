@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -59,6 +59,8 @@
     NSArray *mSelectActionButton;
     UIButton *mSelectButton;
     int mSelectionMode;
+    MesiboMessageScreen *mScreen;
+    MesiboMessageRow *msgrow;
 }
 @end
 
@@ -78,6 +80,8 @@
     mHeightCalculator = nil;
     mSelectionMode = SELECTION_NONE;
     mSelectButton = nil;
+    mScreen = nil;
+    msgrow = [MesiboMessageRow new];
 
     return self;
 }
@@ -87,19 +91,14 @@
     
 }
 
--(void) setup:(id)parent tableView:(UITableView *)tableView model:(MesiboMessageModel *)model delegate:(id)delegate uidelegate:(id)uidelegate {
+-(void) setup:(id)parent screen:(MesiboMessageScreen *)screen model:(MesiboMessageModel *)model delegate:(id)delegate uidelegate:(id)uidelegate {
     mModel = model;
-    mTable = tableView;
+    mTable = screen.table;
+    mScreen = screen;
     
     mListener = delegate;
     mUiListener = uidelegate;
     mParent = parent;
-    
-    if(mUiListener) {
-        UITableView *tv = [mUiListener getMesiboTableView];
-        if(tv)
-            mTable = tv;
-    }
     
     if(![delegate conformsToProtocol:@protocol(MesiboTableControllerDelegate)]) {
         //[NSException raise:@"MesiboDelegateException" format:@"MesiboTableControllerDelegate not implemented"];
@@ -172,7 +171,7 @@
 -(void) reloadTable:(BOOL)scrollToLatest {
     
     [MesiboInstance runInThread:YES handler:^{
-     
+        
         [CATransaction begin];
         [CATransaction setCompletionBlock:^{
             if(!mScrolledToLatestOnce) {
@@ -183,28 +182,11 @@
         [mTable reloadData];
         [CATransaction commit];
         
-        //TBD. we don't need to scrollToLatestChat once it was called earlier
-#if 0
-        [mTable reloadDataWithCompletion:^{
-            if(!mScrolledToLatestOnce) {
-                //[mTable layoutIfNeeded];
-                
-                //[self scrollToLatestChat:YES];
-                
-                [self scrollToLatestChat:YES];
-                [self scrollToBottom:NO];
-            }
-            
-            //mFirstLoadFromDB = NO;
-            
-        }];
-#endif
-        
     }];
 }
 
 
--(void) reload:(MesiboMessageView *) m {
+-(void) reload:(MessageData *) m {
     MesiboMessageViewHolder *vh = [m getViewHolder];
     if(!vh) return;
     
@@ -308,7 +290,7 @@
     
     int row = (int) [indexPath row];
     
-    MesiboMessageView *message = [mModel get:row];
+    MessageData *message = [mModel get:row];
     
     //if(MESSAGEVIEW_TIMESTAMP == [message getType])
       //  return MESSAGE_DATE_SECTION_HEIGHT;
@@ -320,11 +302,16 @@
     
     if(mUiListener) {
         MesiboMessage *m = [message getMesiboMessage];
-        [message setHeight:[mUiListener MesiboTableView:tableView heightForMessage:m]];
+    
+        [msgrow reset];
+        msgrow.message = m;
         
-        //custom delegate can return negative
-        if([message getHeight] >= 0)
-            return [message getHeight];
+        CGFloat height = [mUiListener MesiboUI_onGetCustomRowHeight:mScreen row:msgrow];
+        
+        if(height >= 0) {
+            [message setHeight:height];
+            return height;
+        }
     }
     
     // we are using a dummy cell for heigh calculation.
@@ -341,10 +328,13 @@
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     
     int row = (int) [indexPath row];
+    MesiboMessage *msg = [[mModel get:row] getMesiboMessage];
     
     if(mUiListener) {
-        MesiboMessage *m = [[mModel get:row] getMesiboMessage];
-        UITableViewCell *cell = [mUiListener MesiboTableView:tableView cellForMessage:m];
+        [msgrow reset];
+        msgrow.message = msg;
+        
+        UITableViewCell *cell = [mUiListener MesiboUI_onGetCustomRow:mScreen row:msgrow];
         
         //custom delegate can return null
         if(cell)
@@ -358,19 +348,14 @@
     
     [cell setTableController:self];
     
-    //cell.message = [mChatList objectAtIndex:listSize -indexPath.row];
-    MesiboMessageView *old = [cell getMessage];
+    MessageData *old = [cell getMessage];
     
     if(old && [old getViewHolder] == cell)
         [[cell getMessage] setViewHolder:nil];
     
-    MesiboMessageView *m = [mModel get:row];
+    MessageData *m = [mModel get:row];
     
     [cell setMessage:m indexPath:indexPath];
-    //m.mIndexPath = indexPath;
-    
-   // int h = mTable.contentSize.height;
-   // int o = mTable.contentOffset.y;
     
     [[cell getMessage]  setViewHolder:cell];
     
@@ -378,8 +363,16 @@
     
     cell.accessoryView = [cell getAccessoryView];
     
-    return cell;
+    if(mUiListener) {
+        
+        [msgrow reset];
+        msgrow.row = cell;
+        msgrow.message = msg;
+        [cell setMesiboRow:msgrow];
+        [mUiListener MesiboUI_onUpdateRow:mScreen row:msgrow last:YES];
+    }
     
+    return cell;
 }
 
 - (BOOL) tableView:(UITableView *)tableView shouldShowMenuForRowAtIndexPath:(NSIndexPath *)indexPath{
@@ -433,21 +426,6 @@
     [mTable setContentOffset:CGPointZero animated:animated];
     return;
     
-#if 0
-    if (mTable.contentSize.height > mTable.frame.size.height) {
-        
-        CGPoint offset = CGPointMake(0 ,(mTable.contentSize.height - mTable.frame.size.height));
-        [mTable setContentOffset:offset animated:animated];
-        
-        if(c && c. mCellHeight < 50) { // workaround for single chat line
-            
-            CGPoint offset = CGPointMake(0 ,(mTable.contentSize.height - mTable.frame.size.height));
-            offset.y +=70;
-            [mTable setContentOffset:offset animated:animated];
-        }
-    }
-#endif
-    
 }
 
 - (void)scrollToLatestChat:(BOOL)animation {
@@ -469,9 +447,20 @@
         if (text) {
             [sharingItems addObject:text];
         }
-        if ([[cell getMessage]  hasImage]) {
-            [sharingItems addObject:[[cell getMessage]  getImage]];
+    
+        if ([[cell getMessage]  hasThumbnail]) {
+            MessageData *mv = [cell getMessage];
+            NSString *path = [mv getPath];
+            UIImage *image = [mv getImage];
+            
+            if(image) [sharingItems addObject:image];
+            else if(path) {
+                NSURL *url = [NSURL fileURLWithPath:path];
+                [sharingItems addObject:url];
+            }
+            //[sharingItems addObject:[[cell getMessage]  getImage]];
         }
+
         /* TBD, temporarily disabled
          if (cell.message.mImagePath) {
          [sharingItems addObject:cell.message.mImagePath];
@@ -484,14 +473,16 @@
 }
 
 -(BOOL) isSelected:(id)data {
-    if(SELECTION_NONE == mSelectionMode)
+    if(SELECTION_NONE == mSelectionMode || !data)
         return NO;
     
-    MesiboMessageView *message = (MesiboMessageView *) data;
+    MessageData *message = (MessageData *) data;
+    uint64_t mid = [message getMid];
+    if(!mid) return NO;
     
-    NSNumber *key = @([message getMid]);
+    NSNumber *key = @(mid);
     // remove object if exist, else add it - select unselect
-    MesiboMessageView *m = [mSelectedMessages objectForKey:key];
+    MessageData *m = [mSelectedMessages objectForKey:key];
     if(m) return YES;
     return NO;
 }
@@ -501,11 +492,10 @@
     if(SELECTION_NONE == mSelectionMode)
         return;
     
-    MesiboMessageView *message = data;
+    MessageData *message = data;
     
     NSNumber *key = @([message getMid]);
-    // remove object if exist, else add it - select unselect
-    MesiboMessageView *m = [mSelectedMessages objectForKey:key];
+    MessageData *m = [mSelectedMessages objectForKey:key];
     if(m) {
         [mSelectedMessages removeObjectForKey:key];
     } else {
@@ -568,7 +558,7 @@
     uint64_t ids[32];
     int count = 0;
     for (id key in mSelectedMessages) {
-        MesiboMessageView *m = [mSelectedMessages objectForKey:key];
+        MessageData *m = [mSelectedMessages objectForKey:key];
         ids[count++] = [m getMid];
         
         [mModel deleteMessage:m remote:remote refresh:NO];
@@ -617,11 +607,11 @@
                                  message:nil
                                  preferredStyle:UIAlertControllerStyleActionSheet];
     
-    UIAlertAction* forall = [self addDeleteAlert:view title:@"Delete For Everyone" type:1];
-    UIAlertAction* forme = [self addDeleteAlert:view title:@"Delete For Me" type:0];
+    MesiboUiDefaults *opt = [MesiboUI getUiDefaults];
     
-    UIAlertAction* cancel = [self addDeleteAlert:view title:PICKER_ALERT_CANCEL_TITLE type:-1];
-    
+    UIAlertAction* forall = [self addDeleteAlert:view title:opt.deleteForEveryoneTitle type:1];
+    UIAlertAction* forme = [self addDeleteAlert:view title:opt.deleteForMeTitle type:0];
+    UIAlertAction* cancel = [self addDeleteAlert:view title:opt.cancelTitle type:-1];
     
     [view addAction:forall];
     [view addAction:forme];
@@ -637,7 +627,7 @@
         BOOL deleteForAll = YES;
         //TBD, we just need to check oldest message, not all
         for (id key in mSelectedMessages) {
-            MesiboMessageView *m = [mSelectedMessages objectForKey:key];
+            MessageData *m = [mSelectedMessages objectForKey:key];
             MesiboMessage *mm = [m getMesiboMessage];
             
             uint64_t elapsed = (([MesiboInstance getTimestamp] - mm.ts)/1000);
@@ -663,8 +653,8 @@
     }
     
     NSArray *keys = [mSelectedMessages keysSortedByValueUsingComparator: ^NSComparisonResult(id obj1, id obj2) {
-        MesiboMessageView *s1 = (MesiboMessageView *)obj1;
-        MesiboMessageView *s2 = (MesiboMessageView *)obj2;
+        MessageData *s1 = (MessageData *)obj1;
+        MessageData *s2 = (MessageData *)obj2;
         MesiboMessage *m1 = [s1 getMesiboMessage];
         MesiboMessage *m2 = [s2 getMesiboMessage];
         if(m1.ts == m2.ts)
@@ -679,11 +669,10 @@
     
     NSMutableArray *vals = [[NSMutableArray alloc] init];
     for (id object in keys) {
-        MesiboMessageView *d = [mSelectedMessages objectForKey:object];
+        MessageData *d = [mSelectedMessages objectForKey:object];
         MesiboMessage *m = [d getMesiboMessage];
         
-        // don't forward if upload is in progress
-        if(![m hasMedia] || m.media.location || (m.media.file.mode == MESIBO_FILEMODE_DOWNLOAD) || [m.media.file isTransferred]) {
+        if(![m isRichMessage] || ![m isFileTransferRequired]) {
             [vals addObject:@(m.mid)];
         }
         
@@ -720,11 +709,11 @@
     
     if([sender isKindOfClass:[MesiboMessageViewHolder class]]) {
         MesiboMessageViewHolder *cell = sender;
-        MesiboMessageView *m = [cell getMessage];
+        MessageData *m = [cell getMessage];
         
         //NSString *stringText = cell.message.mReplyMess;
         UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
-        if([m hasImage]) {
+        if([m hasThumbnail]) {
             pasteboard.image = [m getImage];
         } else {
             pasteboard.string = [m getMessage];
@@ -748,29 +737,14 @@
     
     MesiboMessageViewHolder *cell = sender;
     
-    MesiboMessageView *m = [cell getMessage];
+    MessageData *m = [cell getMessage];
     MesiboMessage *mm = [m getMesiboMessage];
     
     [mm setStatus:MESIBO_MSGSTATUS_OUTBOX];
     
-    //TBD update ts and status to OUTBOX before sending
-    //mm.ts = [MesiboInstance getTimestamp];
-    //[cell ]
     
-    
-    if(![mm hasMedia] || (mm.media && mm.media.file &&  [mm.media.file isTransferred])) {
-        uint32_t mid = (uint32_t) [m getMid];
-        [MesiboInstance resend:mid];
-    } else if([mm hasMedia] && mm.media.file) {
-        
-        mm.media.file.userInteraction = true;
-        
-        //TBD. temporary till expiry issue is fixed in API
-        MesiboParams *p = [mm.media.file getParams];
-        if(p && p.expiry == 0)
-            p.expiry = DEFAULT_MSGPARAMS_EXPIRY;
-        
-        [MesiboInstance startFileTransfer:mm.media.file];
+    if([mm isFailed]) {
+        [mm resend];
     }
 }
 
@@ -789,8 +763,8 @@
 
 - (void)favorite:(id)sender {
     MesiboMessageViewHolder *cell = sender;
-    MesiboMessageView *m = [cell getMessage];
-    m.mIsFavorite = ! m.mIsFavorite ;
+    MessageData *m = [cell getMessage];
+    [m toggleFavourite];
     [mTable reloadData];
 }
 

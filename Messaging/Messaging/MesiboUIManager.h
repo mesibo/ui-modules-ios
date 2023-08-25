@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -49,13 +49,12 @@
 
 + (void) launchUserListViewcontroller:(UIViewController *) parent withChildViewController : (UserListViewController*) childViewController withContactChooser:(int) selection withForwardMessageData:(NSArray *) fwdMessage  withMembersList: (NSString* )memberList withForwardGroupName:(NSString*) forwardGroupName withForwardGroupid:(long) forwardGroupid;
 
-+(void) launchMessageViewController:(UIViewController *) parent withUserData : (MesiboProfile*) userProfile uidelegate:(id)uidelegate;
-
-+ (void) launchCreatNewGroupController:(UIViewController *)parent withMemeberProfiles:(NSMutableArray*)profileArray existingMembers:(NSMutableArray *)members withGroupId:(uint32_t) groupid  modifygroup:(BOOL)modifygroup  uidelegate:(id)uidelegate;
++ (void) launchCreateNewGroupController:(UIViewController *)parent withMemeberProfiles:(NSMutableArray*)profileArray existingMembers:(NSMutableArray *)members withGroupId:(uint32_t) groupid  modifygroup:(BOOL)modifygroup  uidelegate:(id)uidelegate;
 
 +(void) showMediaFilesInViewer:(UIViewController *) parent withInitialIndex:(int) index withData:(NSArray*) data withTitle:(NSString *)title;
 
-+(void) showImageInViewer:(UIViewController *) parent withImage:(UIImage*) image withTitle:(NSString *)title;
++(void) showImageInViewer:(UIViewController *) parent withImage:(UIImage*) image withTitle:(NSString *)title handler:(MesiboImageViewerBlock) handler;
++(void) showImageFile:(UIViewController *) parent path:(NSString*) path withTitle:(NSString *)title;
 
 + (void) showVideofile:(UIViewController *) parent withVideoFilePath:(NSString*) filePath;
 
@@ -64,4 +63,7 @@
 + (void) pickImageData:(ImagePicker*)im withParent:(id)Parent withMediaType:(int)type withBlockHandler:(void(^)(ImagePickerFile *file))handler ;
 
 + (void) launchImageEditor:(ImagePicker*)im withParent:(id)Parent withImage:(UIImage *)image title:(NSString*)title hideEditControls:(BOOL)hideControls showCaption:(BOOL)showCaption showCropOverlay:(BOOL)showCropOverlay squareCrop:(BOOL)squareCrop maxDimension:(int)maxDimension withBlock: (MesiboImageEditorBlock)handler;
+
++(void) showE2EInfo:(UIViewController *) parent profile:(MesiboProfile*) profile;
+
 @end

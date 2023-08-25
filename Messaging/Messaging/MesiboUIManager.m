@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -48,68 +48,31 @@
 #import <AVKit/AVKit.h>
 #import "MesiboCommonUtils.h"
 #import "MesiboConfiguration.h"
+#import "E2EViewController.h"
 
 
 @implementation MesiboUIManager
 
 + (void) launchUserListViewcontroller:(UIViewController *) parent withChildViewController : (UserListViewController*) childViewController withContactChooser:(int) selection withForwardMessageData:(NSArray *)fwdMessage  withMembersList:(NSString* )memberList withForwardGroupName:(NSString*) forwardGroupName withForwardGroupid:(long) forwardGroupid {
-
     
-    childViewController.mNewContactChooser = selection;
+    MesiboUserListScreenOptions *opts = [MesiboUserListScreenOptions new];
+    opts.mode = selection;
+    opts.groupid = forwardGroupid;
+    opts.forwardIds = fwdMessage;
+    
+    childViewController.mOpts = opts;
+    
+    childViewController.mMode = selection;
     childViewController.mForwardGroupid = forwardGroupid;
-    childViewController.fwdMessage = fwdMessage;
-
+    childViewController.forwardIds = fwdMessage;
     
     [parent.navigationController pushViewController:childViewController animated:YES];
     return;
 }
 
-+(void) launchMessageViewController:(UIViewController *) parent withUserData : (MesiboProfile*) userProfile uidelegate:(id)uidelegate {
-    
-    if(!parent)
-        return;
-        
-    UIStoryboard *storyboard = [MesiboCommonUtils getMeMesiboStoryBoard];
-    MessageViewController *cv = (MessageViewController*) [storyboard instantiateViewControllerWithIdentifier:@"MessageViewController"];
-    if([cv isKindOfClass:[MessageViewController class]]) {
-        cv.mUser = userProfile ;
-        [cv setTableViewDelegate:uidelegate];
-        
-        MesiboUiOptions *options = [MesiboUI getUiOptions];
-        
-        if(options.hidesBottomBarWhenPushed)
-            cv.hidesBottomBarWhenPushed = YES;
-        
-        if(parent.navigationController)
-            [parent.navigationController pushViewController:cv animated:YES];
-        else
-            [parent presentViewController:cv animated:YES completion:nil];
-        
-        return;
-    }
 
-}
 
-+(void) launchMessageViewController1:(UIViewController *) parent withUserData : (MesiboProfile*) userProfile {
-    
-    if(!parent)
-        return;
-    
-    UIStoryboard *storyboard = [MesiboCommonUtils getMeMesiboStoryBoard];
-    MessageViewController *cv = (MessageViewController*) [storyboard instantiateViewControllerWithIdentifier:@"MessageViewController"];
-    if([cv isKindOfClass:[MessageViewController class]]) {
-        cv.mUser = userProfile ;
-        if(parent.navigationController)
-            [parent.navigationController pushViewController:cv animated:YES];
-        else
-            [parent presentViewController:cv animated:YES completion:nil];
-        
-        return;
-    }
-    
-}
-
-+ (void) launchCreatNewGroupController:(UIViewController *)parent withMemeberProfiles:(NSMutableArray*)profileArray existingMembers:(NSMutableArray *)members withGroupId:(uint32_t) groupid  modifygroup:(BOOL)modifygroup  uidelegate:(id)uidelegate{
++ (void) launchCreateNewGroupController:(UIViewController *)parent withMemeberProfiles:(NSMutableArray*)profileArray existingMembers:(NSMutableArray *)members withGroupId:(uint32_t) groupid  modifygroup:(BOOL)modifygroup  uidelegate:(id)uidelegate{
     
     CreateNewGroupViewController *clv = [parent.storyboard
                                          instantiateViewControllerWithIdentifier:@"CreateNewGroupViewController"];
@@ -123,17 +86,36 @@
         [parent.navigationController pushViewController:clv animated:YES];
     }
     
-
+    
 }
+
++(void) showE2EInfo:(UIViewController *) parent profile:(MesiboProfile*) profile {
+    
+    if(!parent)
+        return;
+    
+    
+    E2EViewController *cv = [E2EViewController new];
+    [cv setProfile:profile];
+    cv.modalPresentationStyle = UIModalPresentationFullScreen;
+    
+    [parent presentViewController:cv animated:YES completion:nil];
+    
+}
+
 
 +(void) showMediaFilesInViewer:(UIViewController *) parent withInitialIndex:(int) index withData:(NSArray*) data withTitle:(NSString *)title{
     
     [[ImagePicker sharedInstance] showMediaFilesInViewer:parent withInitialIndex:index withData:data withTitle:title];
 }
 
-+(void) showImageInViewer:(UIViewController *) parent withImage:(UIImage*) image withTitle:(NSString *)title{
++(void) showImageInViewer:(UIViewController *) parent withImage:(UIImage*) image withTitle:(NSString *)title  handler:(MesiboImageViewerBlock) handler{
     
-    [[ImagePicker sharedInstance] showPhotoInViewer:parent withImage:image withTitle:title];
+    [[ImagePicker sharedInstance] showPhotoInViewer:parent withImage:image withTitle:title handler:handler];
+}
+
++(void) showImageFile:(UIViewController *) parent path:(NSString*) path withTitle:(NSString *)title {
+    [ImagePicker showFile:parent path:path title:title type:0];
 }
 
 + (void) showVideofile:(UIViewController *) parent withVideoFilePath:(NSString*) filePath {
@@ -147,43 +129,28 @@
         [playerViewController.player play];//Used to Play On start
         [parent presentViewController:playerViewController animated:YES completion:nil];
     }
-
-    
-    
 }
 
-//https://useyourloaf.com/blog/querying-url-schemes-with-canopenurl/
 + (void)openScheme:(NSString *)scheme {
     UIApplication *application = [UIApplication sharedApplication];
-    //NSURL *URL = [NSURL URLWithString:scheme];
     NSURL *URL = [NSURL fileURLWithPath:scheme];
     
     [application openURL:URL options:@{} completionHandler:^(BOOL success) {
-        if (success) {
-            NSLog(@"Opened %@",scheme);
-        }
     }];
 }
 
-//Global is needed, else UIDocumentInteractionController is crashing once local variable out of scope
 UIDocumentInteractionController *documentController;
 
 + (void) openGenericFiles:(UIViewController *) parent withFilePath:(NSString*) filePath {
     
-    //[self openScheme:filePath];
-    //return;
-    
     NSURL *resourceToOpen = [NSURL fileURLWithPath:filePath];
     BOOL canOpenResource = [[UIApplication sharedApplication] canOpenURL:resourceToOpen];
     if (YES || canOpenResource) {
-        //UIApplication *application = [UIApplication sharedApplication];
-        //[application openURL:resourceToOpen options:@{} completionHandler:nil];
-        
         documentController = [UIDocumentInteractionController interactionControllerWithURL:[NSURL fileURLWithPath:filePath]];
         documentController.delegate = nil;
         [documentController presentOpenInMenuFromRect:CGRectZero inView:parent.view animated:YES];
     }
-
+    
 }
 
 
@@ -191,6 +158,10 @@ UIDocumentInteractionController *documentController;
     if(nil == im){
         im = [ImagePicker sharedInstance];
     }
+    
+    PickerUiOptions *po = [ImagePicker getUiOptions];
+    po.mToolbarColor = [MesiboUI getUiDefaults].mToolbarColor;
+    
     im.mParent = Parent;
     [im pickMedia:type :handler];
     
@@ -201,8 +172,6 @@ UIDocumentInteractionController *documentController;
         im = [ImagePicker sharedInstance];
     }
     im.mParent = Parent;
-    //[im getImageEditor:image withTitle:title hideEditControl:hideControls withBlock:handler];
-    //TBD, 1280 -> take from mUiOptions
     [im getImageEditor:image title:title hideEditControl:hideControls showCaption:showCaption showCropOverlay:showCropOverlay squareCrop:squareCrop maxDimension:maxDimension withBlock:handler];
     
 }

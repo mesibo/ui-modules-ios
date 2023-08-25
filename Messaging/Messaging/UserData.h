@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -45,33 +45,23 @@
 
 @interface UserData : NSObject
 
-//@property (strong,nonatomic) UIImage *userThumbnail;
-//@property (strong,nonatomic) UIImage *userImage;
-//@property (assign,nonatomic) NSInteger newMessages;
-//@property (assign,nonatomic) NSInteger messageStatus;
-//@property (assign,nonatomic) u_int64_t mID;
-
 +(UserData *) initialize:(MesiboProfile *) profile;
 
--(void) setMessage:(uint64_t)messageid time:(NSString*)msgtime status:(int)status deleted:(BOOL)deleted msg:(NSString*)msg;
+-(void) setMessage:(MesiboMessage *) message;
+-(void) setTextMessage:(NSString *) message;
 -(NSString *) getPeer;
 -(uint32_t) getGroupId;
 -(uint64_t) getMid;
--(void) setMid:(uint64_t) msgid;
 -(void) setUser:(MesiboProfile *) profile;
         
 -(void) setFixedImage:(BOOL) fixed;
 -(int) getUnreadCount;
--(void) setUnreadCount:(int)count;
--(void) clearUnreadCount;
 -(int) getMessageStatus;
--(void) setMessageStatus:(int) status;
--(void) setLastMessage:(NSString *) lastMsg;
 -(NSString *) getLastMessage;
 -(NSString *) getTime;
--(void) setTime:(NSString *) msgTime;
 -(NSString *) getName;
 -(NSString *) getUserStatus;
+-(MesiboMessage *) getMessage;
 -(BOOL)isDeleted;
 -(void) setDeleted:(BOOL)deleted;
 
@@ -82,15 +72,14 @@
 -(UIImage *) getThumbnail;
 -(UIImage *) getDefaultImage:(BOOL)useTitler ;
 
--(void) clearTyping;
 -(void) setTyping:(MesiboProfile *) profile;
 -(BOOL) isTyping;
--(uint64_t) getTypingTimeout;
 -(MesiboProfile *) getTypingProfile;
 -(void) setUserListPosition:(NSIndexPath *)indexPath;
 -(NSIndexPath *) getUserListPosition;
 
-+(UserData *) getUserDataFromParams:(MesiboParams *) params;
+
++(UserData *) getUserDataFromParams:(MesiboMessageProperties *) params;
 
 +(UserData *) getUserDataFromProfile:(MesiboProfile *) profile;
 

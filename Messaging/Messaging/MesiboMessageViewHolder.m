@@ -1,4 +1,4 @@
-/** Copyright (c) 2021 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -39,9 +39,9 @@
  *
  */
 
+
 #import "MesiboMessageViewHolder.h"
 #import "MesiboMessageViewController.h"
-//#import "ImageViewer.h"
 #import <MapKit/MapKit.h>
 #import <AVFoundation/AVFoundation.h>
 #import <AVKit/AVKit.h>
@@ -54,8 +54,9 @@
 #import "LetterTitleImage.h"
 
 #define BUBBULE_TOP_MARGIN  8
-#define BUBBLE_BOTTOM_MARGIN 5
-#define BUBBLE_LEFT_MARGIN  10
+#define BUBBLE_BOTTOM_MARGIN 7
+#define BUBBLE_LEFT_MARGIN  5
+#define CUSTOM_BUBBLE_BOTTOM_MARGIN 15
 
 #define BUBBLE_RIGHT_MARGIN 10
 
@@ -66,16 +67,6 @@
 //with extra space of 5
 #define FAVORITE_ICON_WIDTH 25
 #define SINGLIE_LINE_HEIGHT 35
-
-/*
- @implementation UITextView (DisableCopyPaste)
- 
- - (BOOL)canBecomeFirstResponder
- {
- return NO;
- }
- 
- @end*/
 
 #define RIGHT_OUT_MARGIN    4
 
@@ -88,21 +79,28 @@
     UILabel *_senderName;
     UIView *_replyView;
     UIView *_bubbleView;
-    UIImageView *_bubbleChatImage;
+    UIView *_titleView;
+   // UIImageView *_bubbleChatImage;
     UIImageView *_statusIcon;
     UIImageView *_favoriteIcon;
     MesiboMessage * _message;
-    MesiboMessageView *_uiData;
+    MessageData *_uiData;
     UILabel *_titleLabel;
+    UILabel *_subtitleLabel;
+    UILabel *_headingLabel;
+    UILabel *_fileNameLabel;
+    UILabel *_fileSizeLabel;
     ThumbnailProgressView *_mDownloadProgressView;
     UIImageView *_audioVideoPlayLayer;
     
     bool isDownloading ;
     int mFavoriteIconWidth;
     bool mIstimeLabelOverPicture;
+    BOOL showFileInfo;
     UIButton *mAccessoryView;
     NSIndexPath *mIndexPath;
     
+    CGRect _mTitleViewFrame;
     CGFloat _mLeft_x;
     CGFloat _mRight_x;
     
@@ -112,6 +110,7 @@
     CGFloat pic_max_witdh ;
     CGFloat pos_y;
     CGFloat pos_x;
+    CGFloat single_line_height;
     UIViewAutoresizing globlResizing;
 }
 @end
@@ -120,11 +119,11 @@
 
 - (void)awakeFromNib {
     [super awakeFromNib];
-    // Initialization code
 }
 
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    single_line_height = 0;
     CGRect screenRect = [[UIScreen mainScreen] bounds];
     _screenWidth = screenRect.size.width;
     max_witdh = 0.75*_screenWidth;
@@ -133,8 +132,9 @@
     _mLeft_x = BUBBLE_LEFT_MARGIN + INCOMINGBUBBLE_TO_SCREEN_LEFT_MARGIN;
     _mRight_x = self.contentView.frame.size.width  - (BUBBLE_RIGHT_MARGIN + OUTGOINGBUBBLE_TO_SCREEN_RIGHT_MARGIN);
     
+    _mTitleViewFrame = CGRectMake(0, 0, 0, 0);
+    
     if (self) {
-        // Helpers
         self.backgroundColor = [UIColor clearColor];
         self.contentView.backgroundColor = [UIColor clearColor];
         self.selectionStyle = UITableViewCellSelectionStyleNone;
@@ -143,43 +143,51 @@
         _messageLabel = [[UITextView alloc] init];
         _chatPicture = [[UIImageView alloc] init];
         
-        _bubbleChatImage = [[UIImageView alloc] init];
+        //_bubbleChatImage = [[UIImageView alloc] init];
         _bubbleView = [[UIView alloc] init];
+        _titleView = [[UIView alloc] init];
         _timeLabel = [[UILabel alloc] init];
         _statusIcon = [[UIImageView alloc] init];
         _senderName =[[UILabel alloc] init];
         _titleLabel = [[UILabel alloc]init];
+        _subtitleLabel = [[UILabel alloc]init];
+        _headingLabel = [[UILabel alloc]init];
+        _fileNameLabel = [[UILabel alloc]init];
+        _fileSizeLabel = [[UILabel alloc]init];
         _favoriteIcon = [[UIImageView alloc] init];
         _replyView = [[UIView alloc] init];
         _audioVideoPlayLayer = [[UIImageView alloc] init];
         
         _mDownloadProgressView = [[ThumbnailProgressView alloc] init];
-        uint32_t toolbarColor = [MesiboUI getUiOptions].mToolbarColor;
+        uint32_t toolbarColor = [MesiboUI getUiDefaults].mToolbarColor;
         UIColor *color = nil;
         if(toolbarColor)
             color = [UIColor getColor:toolbarColor];
         
         [_mDownloadProgressView config:nil progressColor:nil tickColor:color lineWidth:0 arrowUp:NO];
         
+        //[self.contentView addSubview:_bubbleChatImage];
         [self.contentView addSubview:_bubbleView];
+        [self.contentView addSubview:_titleView];
         [self.contentView addSubview:_senderName];
         [self.contentView addSubview:_messageLabel];
         [self.contentView addSubview:_chatPicture];
         [self.contentView addSubview:_titleLabel];
+        [self.contentView addSubview:_subtitleLabel];
+        [self.contentView addSubview:_headingLabel];
+        [self.contentView addSubview:_fileNameLabel];
+        [self.contentView addSubview:_fileSizeLabel];
         [self.contentView addSubview:_timeLabel];
         [self.contentView addSubview:_statusIcon];
         [self.contentView addSubview:_favoriteIcon];
         [self.contentView addSubview:_replyView];
-        
-        
         
         _messageLabel.delegate = self;
         [_messageLabel canBecomeFirstResponder ];
         [_chatPicture addSubview:_audioVideoPlayLayer];
         [_chatPicture addSubview:_mDownloadProgressView];
         
-        UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self
-                                                                                    action:@selector(singleTapGestureCaptured)];
+        UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(singleTapGestureCaptured)];
         [_bubbleView addGestureRecognizer:singleTap];
         [_bubbleView setMultipleTouchEnabled:YES];
         [_bubbleView setUserInteractionEnabled:YES];
@@ -189,12 +197,20 @@
     return self;
 }
 
-
--(MesiboMessageView *) getMessage {
+-(MessageData *) getMessage {
     return _uiData;
 }
 
--(void) setMessage:(MesiboMessageView *)uidata indexPath:(NSIndexPath *)indexPath {
+-(BOOL) showE2EIndicator {
+    if(![MesiboUI getUiDefaults].e2eIndicator) return NO;
+    if([_message isIncoming] && [_message isEndToEndEncrypted])
+        return YES;
+
+    return NO;
+}
+
+
+-(void) setMessage:(MessageData *)uidata indexPath:(NSIndexPath *)indexPath {
     _uiData = uidata;
     _message = [uidata getMesiboMessage];
     
@@ -203,17 +219,38 @@
     mIndexPath = indexPath;
 }
 
+-(void) setMesiboRow:(MesiboMessageRow *) row {
+    row.messageText = _messageLabel;
+    row.title = _titleLabel;
+    row.subtitle = _subtitleLabel;
+    row.heading = _headingLabel;
+    row.filename = _fileNameLabel;
+    row.filesize = _fileSizeLabel;
+    row.name = _senderName;
+    row.timestamp = _timeLabel;
+    row.status = _statusIcon;
+    row.image = _chatPicture;
+    row.replyView = _replyView;
+    row.titleView = _titleView;
+    row.heading = _headingLabel;
+    row.footer = nil;
+    row.selected = [super isSelected:_uiData];
+}
+
+-(NSIndexPath *) getPosition {
+    return mIndexPath;
+}
+
 
 -(void)buildCell {
     [self resetCell];
     
     _mLeft_x = BUBBLE_LEFT_MARGIN + INCOMINGBUBBLE_TO_SCREEN_LEFT_MARGIN;
     _mRight_x = self.contentView.frame.size.width  - (BUBBLE_RIGHT_MARGIN + OUTGOINGBUBBLE_TO_SCREEN_RIGHT_MARGIN);
-    pos_x=0;
-    pos_y=BUBBULE_TOP_MARGIN;
+    pos_x = 0;
+    pos_y = BUBBULE_TOP_MARGIN;
     
-    
-    if([_message isCustom] || [_message isMissedCall]) {
+    if([_message isCustom] || [_message isMissedCall] || MESIBO_MSGSTATUS_E2E == [_message getStatus]) {
         globlResizing = UIViewAutoresizingFlexibleRightMargin;
         [self setCustomCell];
         [self setNeedsLayout];
@@ -228,28 +265,33 @@
     
     globlResizing = UIViewAutoresizingFlexibleLeftMargin;
     
-#if 0
-    if(_message.mIsFavorite)
-        mFavoriteIconWidth = FAVORITE_ICON_WIDTH;
-    else
-        mFavoriteIconWidth = 0;
-#else
+    if([_message isForwarded]) {
+        [self setHeadingLabel];
+    }
+    
     mFavoriteIconWidth = 0;
-#endif
     
     if([_message isIncoming]){
         globlResizing = UIViewAutoresizingFlexibleRightMargin;
-        if([_message getGroupId] > 0 && _uiData.mShowName)
+        if([_message isGroupMessage] && [_uiData isShowName])
             [self setSenderName]; // clear doubsts about gid . . ..
     }
     
-    if(_uiData.mIsReplyEnabled) {
+    if([_uiData isReply]) {
         [self setReplyView];
         
-    } else if([_message hasMedia]) {
+    } else if([_uiData hasThumbnail]) {
         [self setChatPicture];
+        
+        [self setFileNameLabel];
+        [self setFileSizeLabel];
+        
         if([[_uiData getTitle] length]){
             [self setTitleLabel];
+        }
+        
+        if([[_uiData getSubTitle] length]){
+            [self setSubTitleLabel];
         }
     }
     
@@ -262,9 +304,12 @@
         [self setTimeLabel];
     }
     [self setBubble];
+    [self setTitleView];
+    
     [self addStatusIcon];
     [self setStatusIcon];
     [self addFavoriteIcon];
+    
     [self setNeedsLayout];
 }
 #pragma mark resetCell
@@ -272,16 +317,19 @@
 - (void) resetCell {
     mAccessoryView = nil;
     
-    
     _chatPicture.image = nil;
     _chatPicture.frame = CGRectMake(0, 0, 0, 0);
     _statusIcon.frame = CGRectMake(0, 0, 0, 0);
-    _bubbleChatImage.frame = CGRectMake(0, 0, 0, 0);
     _bubbleView.frame = CGRectMake(0, 0, 0, 0);
+    _titleView.frame = CGRectMake(0, 0, 0, 0);
     _messageLabel.frame =CGRectMake(0, 0, 0, 0);
     _timeLabel.frame =CGRectMake(0, 0, 0, 0);
     _senderName.frame =CGRectMake(0, 0, 0, 0);
     _titleLabel.frame =CGRectMake(0, 0, 0, 0);
+    _subtitleLabel.frame =CGRectMake(0, 0, 0, 0);
+    _headingLabel.frame =CGRectMake(0, 0, 0, 0);
+    _fileNameLabel.frame =CGRectMake(0, 0, 0, 0);
+    _fileSizeLabel.frame =CGRectMake(0, 0, 0, 0);
     _mDownloadProgressView.frame =CGRectMake(0, 0, 0, 0);
     _audioVideoPlayLayer.frame =CGRectMake(0, 0, 0, 0);
     _favoriteIcon.frame =CGRectMake(0, 0, 0, 0);
@@ -289,27 +337,37 @@
     
     //_chatPicture.image = nil;
     _messageLabel.text = nil;
-    _bubbleChatImage.image = nil;
+   // _bubbleChatImage.image = nil;
     _timeLabel.text = nil;
     _statusIcon.image = nil;
     _senderName.text = nil;
     _titleLabel.text = nil;
+    _subtitleLabel.text = nil;
+    _headingLabel.text = nil;
+    _fileNameLabel.text = nil;
+    _fileSizeLabel.text = nil;
     _mDownloadProgressView.hidden = YES;
     _audioVideoPlayLayer.hidden = YES;
     isDownloading = NO;
+    showFileInfo = NO;
     _favoriteIcon.image = nil;
     NSArray *viewsToRemove = [_replyView subviews];
     for (UIView *v in viewsToRemove) {
         [v removeFromSuperview];
     }
     
+    _timeLabel.backgroundColor = [UIColor clearColor];
+    _statusIcon.backgroundColor =  [UIColor clearColor];
+    
+    _mTitleViewFrame = CGRectMake(0, 0, 0, 0);
+    _bubbleView.layer.zPosition = -1;
 }
 
 - (void) setCustomCell {
     
-    
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
     NSString *msg = [_uiData getMessage];
-    UIImage *image = [_uiData getCustomImage];
+    UIImage *image = [_uiData getImage];
         
     if(image) {
         NSTextAttachment *imageAttachment = [[NSTextAttachment alloc] init];
@@ -322,7 +380,6 @@
         NSMutableAttributedString *textAfterIcon= [[NSMutableAttributedString alloc] initWithString:msg];
         [completeText appendAttributedString:textAfterIcon];
         
-        
         _messageLabel.textAlignment=NSTextAlignmentRight;
         _messageLabel.attributedText=completeText;
         
@@ -332,15 +389,13 @@
     
     _messageLabel.frame = CGRectMake(0, 0, max_witdh, MAXFLOAT);
     
-    _messageLabel.font = [UIFont systemFontOfSize:MESSAGE_FONT_SIZE_CUSTOM];
-    _messageLabel.backgroundColor = [UIColor getColor:[_uiData getCustomColor]];
+    _messageLabel.font = [MesiboUI getUiDefaults].customFont;
+    _messageLabel.backgroundColor = [UIColor getColor:[_uiData getColor]];
     _messageLabel.userInteractionEnabled = NO;
     _messageLabel.editable = NO;
-    _messageLabel.textColor=[UIColor getColor:MESSAGE_FONT_COLOR_NORMAL];
+    _messageLabel.textColor=[UIColor getColor:opts.messageTextColor];
     
     _messageLabel.textContainerInset = UIEdgeInsetsMake(5, 5, 5, 5);
-    
-    
     
     [_messageLabel sizeToFit];
     
@@ -362,13 +417,15 @@
 
 -(void)setDateCell {
     
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    
     _messageLabel.text = [_uiData getDate];
     _messageLabel.frame = CGRectMake(0, 0, max_witdh, MAXFLOAT);
     
     _messageLabel.textAlignment = NSTextAlignmentCenter;
-    _messageLabel.font = [UIFont fontWithName:MESSAGE_DATE_FONT_NAME size:MESSAGE_DATE_FONT_SIZE];
-    _messageLabel.textColor = [UIColor getColor:MESSAGE_DATE_FONT_COLOR];
-    _messageLabel.backgroundColor = [UIColor getColor:SYSTEM_MESSAGES_BACKGROUND_COLOR];
+    _messageLabel.font = opts.dateFont;
+    _messageLabel.textColor = [UIColor getColor:opts.dateTextColor];
+    _messageLabel.backgroundColor = [UIColor getColor:opts.dateBackgroundColor];
     _messageLabel.autoresizingMask = UIViewAutoresizingNone;
     
     _messageLabel.editable = NO;
@@ -395,10 +452,9 @@
 
 - (void) setSenderName {
     
-    UIFont *fontz = [UIFont systemFontOfSize:15];
-    _senderName.text = [_message getSenderName];
+    _senderName.text = [_uiData getUsername];
     _senderName.textColor = [LetterTitleImage textColor:_senderName.text];
-    _senderName.font = fontz;
+    _senderName.font = [UIFont systemFontOfSize:15];;
     _senderName.userInteractionEnabled = NO;
     _senderName.alpha = 0.7;
     _senderName.textAlignment = NSTextAlignmentLeft;
@@ -418,7 +474,6 @@
 }
 
 - (void) setReplyView {
-    
     CGFloat picView_x;
     CGFloat picView_y;
     CGFloat picView_w = pic_max_witdh;
@@ -434,45 +489,55 @@
     
     _replyView.autoresizingMask = globlResizing;
     
-    UIView *testView;
-    if(nil != _uiData.mReplyImage) {
-        testView = [[_uiData.mReplyBundle loadNibNamed:@"ReplyImageView" owner:self options:nil] objectAtIndex:0];
+    UIView *innerView;
+    NSBundle *bundle = [MesiboUI getMesiboUIBumble];
+    
+    int width = pic_max_witdh;
+    if([_uiData getReplyBitmap]) {
+        innerView = [[bundle loadNibNamed:@"ReplyImageView" owner:self options:nil] objectAtIndex:0];
     }else {
-        testView = [[_uiData.mReplyBundle loadNibNamed:@"ReplyOnlyTextView" owner:self options:nil] objectAtIndex:0];
+        innerView = [[bundle loadNibNamed:@"ReplyOnlyTextView" owner:self options:nil] objectAtIndex:0];
+        width = max_witdh;
     }
     
-    testView.frame = CGRectMake(0, 0, pic_max_witdh, 10);
-    [testView setNeedsLayout];
-    [testView layoutIfNeeded];
+    MesiboUiDefaults *uio = [MesiboUI getUiDefaults];
+    if (![_message isIncoming]) {
+        innerView.backgroundColor = [UIColor getColor:uio.titleBackgroundColorForMe];
+        
+    } else {
+        innerView.backgroundColor = [UIColor getColor:uio.titleBackgroundColorForPeer];
+    }
+        
+    innerView.frame = CGRectMake(0, 0, width, 10);
+    [innerView setNeedsLayout];
+    [innerView layoutIfNeeded];
     
-    UILabel *namelabel = [testView viewWithTag:100];
-    if(nil != _uiData.mReplyUserName)
-        namelabel.text = _uiData.mReplyUserName;
-    else
-        namelabel.text = @"Unknown User";
+    UILabel *namelabel = [innerView viewWithTag:100];
+    namelabel.text = [_uiData getReplyName];
     
-    UILabel *messagelabel = [testView viewWithTag:101];
-    if(nil != _uiData.mReplyMessage)
-        messagelabel.text = _uiData.mReplyMessage;
-    else
-        messagelabel.text = @"";
+    UILabel *messagelabel = [innerView viewWithTag:101];
+    messagelabel.text = [_uiData getReplyString];
     
+    [namelabel sizeToFit];
     [messagelabel sizeToFit];
     
     picView_h = 5 + CGRectGetMaxY(messagelabel.frame);
     
-    UIImageView *imageView = [testView viewWithTag:102];
-    if(nil != _uiData.mReplyImage && nil != imageView) {
-        imageView.image = _uiData.mReplyImage;
+    UIImageView *imageView = [innerView viewWithTag:102];
+    if(nil != [_uiData getReplyBitmap] && nil != imageView) {
+        imageView.image = [_uiData getReplyBitmap];
     }
     
-    testView.layer.cornerRadius = 5;
-    testView.layer.masksToBounds = YES;
+    innerView.layer.cornerRadius = 5;
+    innerView.layer.masksToBounds = YES;
     
+    int maxwidth = MAX(namelabel.frame.size.width, messagelabel.frame.size.width);
+    maxwidth += 50;
+    maxwidth = innerView.frame.size.width;
     _replyView.frame = CGRectMake(picView_x, picView_y, pic_max_witdh, picView_h);
-    testView.frame = CGRectMake(0, 0, testView.frame.size.width, picView_h);
+    innerView.frame = CGRectMake(0, 0, maxwidth, picView_h);
     
-    [_replyView addSubview:testView];
+    [_replyView addSubview:innerView];
     pos_y +=_replyView.frame.size.height+3;
     
 }
@@ -481,77 +546,165 @@
 
 - (void) setChatPicture {
     
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    UIImage *image = [_uiData getImage];
+    if(!image) return;
+    int widthpercent = opts.horizontalImageWidth;
+    if(image.size.height > image.size.width && image.size.width > 150) {
+        widthpercent = opts.verticalImageWidth;
+    }
+    
+    CGFloat picwitdh = (_screenWidth*widthpercent)/100;
+    if(picwitdh > pic_max_witdh) picwitdh = pic_max_witdh;
+    
+    CGFloat picFrameWidth = picwitdh; // this we are using when smaller image is used and outgoing file so that image is
+                                      // left aligned
+    
+    if(image.size.height < 150 && image.size.width < 150 && ![_message isFileTransferRequired]) {
+        picwitdh = pic_max_witdh/4;
+        showFileInfo = YES;
+    }
+    
+    CGFloat picheight = (image.size.height*picwitdh)/image.size.width;
+    
     CGFloat picView_x;
     CGFloat picView_y;
-    CGFloat picView_w = pic_max_witdh;
-    CGFloat picView_h = picView_w;
+    CGFloat picView_w = picwitdh;
+    CGFloat picView_h = picheight;
     
     if ([_message isIncoming]){
-        picView_x = _mLeft_x;
+        picView_x = (_mLeft_x - BUBBLE_LEFT_MARGIN) + 2;
         
     }else {
-        picView_x = _mRight_x - picView_w;
+        picView_x = _mRight_x - picFrameWidth;
     }
     picView_y = pos_y;
     
     
     _chatPicture.autoresizingMask = globlResizing;
-    
-    if([_message hasMedia] && _message.media.location)
-        picView_h = ((float)picView_w  * 2 )/ 3;
-    
-    UIImage *img = [_uiData getThumbnail];
-    if(!img) img = [_uiData getImage];
-    if(!img) {
-        img = [_uiData updateDefaultFileImage];
-        picView_w /= 2;
-        picView_h /= 2;
-    }
-    
     _chatPicture.frame = CGRectMake(picView_x, picView_y, picView_w, picView_h);
     
-    _chatPicture.image = img;
+    _chatPicture.image = image;
+    _chatPicture.layer.zPosition = 100;
+    _chatPicture.hidden = NO;
     
-    if([_message hasMedia] && (_message.media.location || [_message.media.file isTransferred])) {
+    if(![_message isFileTransferRequired]) {
         _mDownloadProgressView.hidden = YES;
     } else {
         _mDownloadProgressView.hidden = NO;
         _mDownloadProgressView.frame = CGRectMake(0, 0, FILE_PROGRESS_SIZE, FILE_PROGRESS_SIZE);
-        _mDownloadProgressView.mArrowDirectionUp = !([_message isIncoming]);
+        _mDownloadProgressView.mArrowDirectionUp = [_message isUploadRequired];
         _mDownloadProgressView.center = [_chatPicture convertPoint:_chatPicture.center fromView:_chatPicture.superview];
         [_mDownloadProgressView setCircularState:FFCircularStateIcon];
-        
     }
     
     [self setPlayerView];
     
     pos_y +=_chatPicture.frame.size.height+3;
     
+    CGRect headingFrame = _headingLabel.frame;
+    headingFrame.origin.x = picView_x;
+    _headingLabel.frame = headingFrame;
+    _headingLabel.autoresizingMask = globlResizing;
     
 }
 
-
-- (void) setTitleLabel {
+-(CGFloat) getMessageWidth {
+    if(![_message hasThumbnail])
+        return max_witdh;
     
-    _titleLabel.frame = CGRectMake(0, 0, max_witdh, MAXFLOAT);
-    
-    if([_message hasMedia]){
-        _titleLabel.frame = CGRectMake(0, 0, _chatPicture.frame.size.width, MAXFLOAT);
+    if([_message hasAudio] || [_message hasDocument]) {
+        return pic_max_witdh;
     }
     
-    _titleLabel.font = [UIFont fontWithName:@"Helvetica" size:TITLE_FONT_SIZE];
+    return _chatPicture.frame.size.width;
+}
+
+-(CGFloat) getPictureWidth {
+    if(![_message hasThumbnail])
+        return 0;
+    
+    return [self getMessageWidth];
+}
+
+- (void) setTitleLabel {
+    CGFloat msgWidth = [self getMessageWidth];
+    
+    _titleLabel.frame = CGRectMake(0, 0, msgWidth, MAXFLOAT);
+
+    
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    
+    if(opts.titleFont) _titleLabel.font = opts.titleFont;
+   
     _titleLabel.backgroundColor = [UIColor clearColor];
     _titleLabel.clipsToBounds = YES;
     _titleLabel.userInteractionEnabled = NO;
-    _titleLabel.textColor=[UIColor getColor:TITLE_COLOR];
+    _titleLabel.textColor=[UIColor getColor:opts.titleTextColor];
+    _titleLabel.numberOfLines = 2;
     
     _titleLabel.text=[_uiData getTitle];
     [_titleLabel sizeToFit];
     
     CGFloat textView_x;
     CGFloat textView_y;
-    CGFloat textView_w = _chatPicture.frame.size.width;
+    CGFloat textView_w = msgWidth;
     CGFloat textView_h = _titleLabel.frame.size.height;
+    
+    if(0 == _mTitleViewFrame.origin.y)
+        _mTitleViewFrame.origin.y = pos_y;
+    
+    pos_y = pos_y + 5 ;
+    
+    if ([_message isIncoming]){
+        textView_x = _mLeft_x;
+        
+    }else {
+        textView_x = _mRight_x - textView_w;
+    }
+    textView_y = pos_y;
+    
+    if([_message hasThumbnail]) {
+        textView_x = _chatPicture.frame.origin.x;
+    }
+    _titleLabel.frame = CGRectMake(textView_x, textView_y, textView_w, textView_h);
+    _titleLabel.autoresizingMask = globlResizing;
+    pos_y +=_titleLabel.frame.size.height +5 ;
+    
+    _mTitleViewFrame.size.height = pos_y - _mTitleViewFrame.origin.y;
+    
+    CGRect headingFrame = _headingLabel.frame;
+    headingFrame.origin.x = textView_x;
+    _headingLabel.frame = headingFrame;
+    _headingLabel.autoresizingMask = globlResizing;
+    
+}
+
+- (void) setSubTitleLabel {
+    CGFloat msgWidth = [self getMessageWidth];
+    
+    _subtitleLabel.frame = CGRectMake(0, 0, msgWidth, MAXFLOAT);
+
+    
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    if(opts.subtitleFont) _subtitleLabel.font = opts.subtitleFont;
+    
+    _subtitleLabel.backgroundColor = [UIColor clearColor];
+    _subtitleLabel.clipsToBounds = YES;
+    _subtitleLabel.userInteractionEnabled = NO;
+    _subtitleLabel.textColor=[UIColor getColor:opts.titleTextColor];
+    _subtitleLabel.numberOfLines = 3;
+    
+    _subtitleLabel.text=[_uiData getSubTitle];
+    [_subtitleLabel sizeToFit];
+    
+    CGFloat textView_x;
+    CGFloat textView_y;
+    CGFloat textView_w = msgWidth;
+    CGFloat textView_h = _subtitleLabel.frame.size.height;
+    
+    if(0 == _mTitleViewFrame.origin.y)
+        _mTitleViewFrame.origin.y = pos_y;
     
     pos_y = pos_y +5 ;
     
@@ -563,14 +716,84 @@
     }
     textView_y = pos_y;
     
-    if([_message hasMedia]) {
+    if([_message hasThumbnail]) {
         textView_x = _chatPicture.frame.origin.x;
     }
-    _titleLabel.frame = CGRectMake(textView_x, textView_y, textView_w, textView_h);
-    _titleLabel.autoresizingMask = globlResizing;
-    pos_y +=_titleLabel.frame.size.height +5 ;
+    _subtitleLabel.frame = CGRectMake(textView_x, textView_y, textView_w, textView_h);
+    _subtitleLabel.autoresizingMask = globlResizing;
+    pos_y +=_subtitleLabel.frame.size.height + 5 ;
+    
+    _mTitleViewFrame.size.height = pos_y - _mTitleViewFrame.origin.y;
+    
+    CGRect headingFrame = _headingLabel.frame;
+    headingFrame.origin.x = textView_x;
+    _headingLabel.frame = headingFrame;
+    _headingLabel.autoresizingMask = globlResizing;
     
 }
+
+- (void) setFileNameLabel {
+    if(!showFileInfo || ![_uiData getFileName])
+        return;
+    
+    CGFloat msgWidth = [self getMessageWidth];
+    
+    _fileNameLabel.frame = CGRectMake(0, 0, msgWidth, MAXFLOAT);
+
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    
+    if(opts.messageFont) _fileNameLabel.font = opts.messageFont;
+    
+    _fileNameLabel.backgroundColor = [UIColor clearColor];
+    _fileNameLabel.clipsToBounds = YES;
+    _fileNameLabel.userInteractionEnabled = NO;
+    _fileNameLabel.textColor=[UIColor getColor:opts.messageTextColor];
+    _fileNameLabel.numberOfLines = 2;
+    
+    _fileNameLabel.text=[_uiData getFileName];
+    [_fileNameLabel sizeToFit];
+    
+    CGFloat textView_w = msgWidth - (_chatPicture.frame.size.width + 10);
+    CGFloat textView_h = _fileNameLabel.frame.size.height;
+    CGFloat textView_x = _chatPicture.frame.origin.x + _chatPicture.frame.size.width + 10;
+    CGFloat textView_y = _chatPicture.frame.origin.y;
+    
+    _fileNameLabel.frame = CGRectMake(textView_x, textView_y, textView_w, textView_h);
+    _fileNameLabel.autoresizingMask = globlResizing;
+    
+}
+
+- (void) setFileSizeLabel {
+    if(!showFileInfo || ![_uiData getFileSize])
+        return;
+    
+    CGFloat msgWidth = [self getMessageWidth];
+    
+    _fileSizeLabel.frame = CGRectMake(0, 0, msgWidth, MAXFLOAT);
+
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    
+    if(opts.messageFont) _fileSizeLabel.font = opts.messageFont;
+    
+    _fileSizeLabel.backgroundColor = [UIColor clearColor];
+    _fileSizeLabel.clipsToBounds = YES;
+    _fileSizeLabel.userInteractionEnabled = NO;
+    _fileSizeLabel.textColor=[UIColor getColor:opts.messageTextColor];
+    _fileSizeLabel.numberOfLines = 1;
+    
+    _fileSizeLabel.text=[_uiData getFileSize];
+    [_fileSizeLabel sizeToFit];
+    
+    CGFloat textView_w = _fileNameLabel.frame.size.width;
+    CGFloat textView_h = _fileSizeLabel.frame.size.height;
+    CGFloat textView_x = _fileNameLabel.frame.origin.x;
+    CGFloat textView_y = _fileNameLabel.frame.origin.y + _fileNameLabel.frame.size.height + 5;
+    
+    _fileSizeLabel.frame = CGRectMake(textView_x, textView_y, textView_w, textView_h);
+    _fileSizeLabel.autoresizingMask = globlResizing;
+    
+}
+
 
 -(UIView *) getAccessoryView {
     if(MESSAGEVIEW_MESSAGE != [_uiData getType])
@@ -590,12 +813,6 @@
         
         [mAccessoryView addTarget:self action:@selector(onMessageSelectButton:)forControlEvents:UIControlEventTouchUpInside];
     }
-    /*
-     if([_message isSelected])
-     mAccessoryView.image = [MesiboImage getCheckedImage];
-     else
-     mAccessoryView.image = [MesiboImage getUnCheckedImage];
-     */
     
     [mAccessoryView addTarget:self action:@selector(onMessageSelectButton:)forControlEvents:UIControlEventTouchUpInside];
     
@@ -627,64 +844,45 @@
         return;
     }
     
-    
-    if(![_message hasMedia])
+    if(![_message isRichMessage])
         return;
     
-    if(_message.media.location) {
-        [self openActionSheet:nil];
+    if([_message isFileTransferRequired] || [_message isFileTransferInProgress]) {
+        [_message toggleFileTransfer:1];
         return;
     }
     
-    MesiboFileInfo *file = _message.media.file;
-    if(!file) return;
-    //int type = file.type;
+    MesiboFile *file = [_message getFile];
     
-    if(![file isTransferred]) {// image video not downloaded  then
-        
-        if(isDownloading || [file getStatus] == MESIBO_FILESTATUS_INPROGRESS) {
-            [MesiboInstance stopFileTransfer:file];
-            [self stopProgressBar];
+    if(!file || MESIBO_FILETYPE_LOCATION == file.type) {
+        if([_message hasLocation] || (file && MESIBO_FILETYPE_LOCATION == file.type)) {
+            [self openActionSheet:nil];
             return;
         }
-        
-        isDownloading = YES;
-        [_mDownloadProgressView startSpinProgressBackgroundLayer];
-        //[_downloadVu setCircularState:FFCircularStateStopSpinning];
-        file.userInteraction = true;
-        
-        //TBD, temporary, till API issue is fixed
-        MesiboParams *p = [file getParams];
-        if(p && p.expiry == 0)
-            p.expiry = DEFAULT_MSGPARAMS_EXPIRY;
-        
-        if(![MesiboInstance startFileTransfer:file])
-            [self stopProgressBar];
-        
-    }else {
-        if(file.type ==MESIBO_FILETYPE_VIDEO || file.type ==MESIBO_FILETYPE_AUDIO){
-            
-            [MesiboUIManager showVideofile:[self getParent] withVideoFilePath:[file getPath]];
-            
-        }
-        else if(file.type == MESIBO_FILETYPE_IMAGE){
-            [MesiboUIManager showImageInViewer:[self getParent] withImage:[_uiData getImage] withTitle:[_message getSenderName]];
-            
-        } else {
-            
-            [MesiboUIManager openGenericFiles:[self getParent] withFilePath:[file getPath]];
-            
-        }
-        
     }
+    
+    if(!file.path || !file.path.length || [_message openExternally]) {
+        [self openUrl:file.url];
+        return;
+    }
+    
+    
+    if(file.type ==MESIBO_FILETYPE_VIDEO || file.type ==MESIBO_FILETYPE_AUDIO){
+        [MesiboUIManager showVideofile:[self getParent] withVideoFilePath:file.path];
+    } else if(file.type == MESIBO_FILETYPE_IMAGE){
+        [MesiboUIManager showImageFile:[self getParent] path:file.path withTitle:[_message.profile getNameOrAddress:@"+"]];
+    } else {
+        [MesiboUIManager openGenericFiles:[self getParent] withFilePath:file.path];
+    }
+    
 }
 
 -(void) setPlayerView {
-    if(![_message hasMedia] || !_message.media.file || ![_message.media.file isTransferred])
+    if(![_message isRichMessage] || [_message isFileTransferRequired])
         return;
 
     
-    if(_message.media.file.type == MESIBO_FILETYPE_VIDEO || _message.media.file.type == MESIBO_FILETYPE_AUDIO) {
+    if([_message hasAudio] || [_message hasVideo] ) {
         _audioVideoPlayLayer.hidden = NO;
         _audioVideoPlayLayer.userInteractionEnabled = NO;
         _audioVideoPlayLayer.frame = _chatPicture.frame;
@@ -720,17 +918,16 @@
 }
 
 - (void) stopProgressBar {
-    isDownloading = NO;
-    if(![_message hasMedia] || !_message.media.file || ![_message.media.file isTransferred])
+    
+    if(![_message isRichMessage] || ![_message isFileTransferRequired])
         return;
     
-    if([_message.media.file isTransferred]) {
+    [_message stopFileTransfer];
+    
+    if(![_message isFileTransferRequired]) {
         [self setPlayerView];
-        if(_message.media.file.mode == MESIBO_FILEMODE_DOWNLOAD) {
-            _mDownloadProgressView.hidden = YES;
-            return;
-        }
-        
+        _mDownloadProgressView.hidden = YES;
+        //momemntary display upload successful
         [_mDownloadProgressView  setCircularState:  FFCircularStateCompleted];
         double delayInSeconds = 2.0;
         dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
@@ -749,55 +946,97 @@
     }
 }
 
--(void) updateFileProgress:(MesiboFileInfo *) file {
+-(void) updateFileProgress:(MesiboFile *) file {
     
-    int progress = [file getProgress];
-    
-    if([file isTransferred]) {
-        if(file.image)
-            _chatPicture.image = file.image;
-        [self stopProgressBar];
-        return;
-    }
-    
-    int status = [file getStatus];
-    
-    if(MESIBO_FILESTATUS_INPROGRESS == status) {
-        [self setProgress:progress];
-        return;
-    }
-    
-    if(MESIBO_FILEMODE_UPLOAD == file.mode) {
-        [self updateStatusIcon:MESIBO_MSGSTATUS_FAIL];
-    }
-    
-    [self stopProgressBar];
+   
 }
 
 #pragma mark - TextView
 
+- (void) setHeadingLabel {
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    if(!opts.forwardedTitle || !opts.forwardedTitle.length)
+        return;
+    
+    _headingLabel.frame = CGRectMake(0, 0, [self getMessageWidth], MAXFLOAT);
+    
+    
+    if(opts.headingFont) _headingLabel.font = opts.headingFont;
+        
+        
+        
+    _headingLabel.backgroundColor = [UIColor clearColor];
+    _headingLabel.clipsToBounds = YES;
+    _headingLabel.userInteractionEnabled = NO;
+    _headingLabel.textColor=[UIColor getColor:opts.headingTextColor];
+    
+    _headingLabel.text= opts.forwardedTitle;
+    [_headingLabel sizeToFit];
+    
+    CGFloat textView_x;
+    CGFloat textView_y;
+    CGFloat textView_w = _headingLabel.frame.size.width;
+    CGFloat textView_h = _headingLabel.frame.size.height;
+    
+    pos_y = pos_y + 2 ;
+
+    // we will later adjust x in text view
+    if ([_message isIncoming]){
+        textView_x = _mLeft_x;
+        
+    }else {
+        textView_x = _mRight_x;
+    }
+    
+    textView_y = pos_y;
+    
+    _headingLabel.frame = CGRectMake(textView_x, textView_y, textView_w, textView_h);
+    _headingLabel.autoresizingMask = globlResizing;
+    pos_y +=_headingLabel.frame.size.height +5 ;
+    
+}
+
 
 -(void)setTextView {
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    
+    if(0 == single_line_height) {
+        CGRect rect =  [self measureHeight:@"12:34" font:opts.messageFont width:max_witdh];
+        single_line_height = rect.size.height;
+    }
+    
     _messageLabel.frame = CGRectMake(0, 0, max_witdh, MAXFLOAT);
-    _messageLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleBody];
+
+    
+    if(opts.messageFont)
+        _messageLabel.font = opts.messageFont;
+    
     _messageLabel.backgroundColor = [UIColor clearColor];
     _messageLabel.userInteractionEnabled = NO;
+    _messageLabel.textAlignment = NSTextAlignmentLeft;
     
     NSString *msg = [_uiData getMessage];
-
-    if(_uiData.mReplyMessage) {
+    
+    //added Appr 14, 2022
+    msg = [msg stringByTrimmingCharactersInSet:
+                         [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    
+    
+    CGRect tr =  [self measureHeight:[NSString stringWithFormat:@"%@ 12:34 56", msg] font:opts.messageFont width:max_witdh];
+    
+    if([_uiData isReply]) {
         _messageLabel.frame = CGRectMake(0, 0, pic_max_witdh, MAXFLOAT);
-        _messageLabel.textColor=[UIColor getColor:MESSAGE_FONT_COLOR_WITH_REPLY];
+        _messageLabel.textColor=[UIColor getColor:opts.messageReplyTextColor];
         
-    }else if([_uiData hasImage]){
-        _messageLabel.frame = CGRectMake(0, 0, _chatPicture.frame.size.width, MAXFLOAT);
-        _messageLabel.textColor=[UIColor getColor:MESSAGE_FONT_COLOR_WITH_PICTURE];
+    }else if([_uiData hasThumbnail]){
+        _messageLabel.frame = CGRectMake(0, 0, [self getMessageWidth], MAXFLOAT);
+        _messageLabel.textColor=[UIColor getColor:opts.messagePictureTextColor];
         
     } if([_message isDeleted]) {
-        _messageLabel.textColor=[UIColor getColor:MESSAGEDELETED_FONT_COLOR_NORMAL];
-        msg = MESSAGEDELETED_STRING;
+        _messageLabel.textColor=[UIColor getColor:opts.messageDeletedTextColor];
+        msg = opts.deletedMessageTitle;
     } else {
-        _messageLabel.textColor=[UIColor getColor:MESSAGE_FONT_COLOR_NORMAL];
+        _messageLabel.textColor=[UIColor getColor:opts.messageTextColor];
     }
     
     _messageLabel.text= msg;
@@ -817,6 +1056,11 @@
     CGFloat textView_w = _messageLabel.frame.size.width;
     CGFloat textView_h = _messageLabel.frame.size.height;
     
+    CGFloat titleViewBottom = _mTitleViewFrame.origin.y + _mTitleViewFrame.size.height;
+    
+    if(titleViewBottom > 0 && (pos_y <= titleViewBottom+10))
+        pos_y = titleViewBottom+10;
+    
     if (![_message isIncoming]) {
         textView_x = (self.contentView.frame.size.width - textView_w) - (BUBBLE_RIGHT_MARGIN + OUTGOINGBUBBLE_TO_SCREEN_RIGHT_MARGIN);
         textView_y = pos_y;
@@ -826,11 +1070,22 @@
         textView_y = pos_y;
     }
     
-    if([_uiData hasImage]) {
+    if([_uiData hasThumbnail]) {
         textView_x = _chatPicture.frame.origin.x;
-    }if(_uiData.mIsReplyEnabled) {
+    }if([_uiData isReply]) {
         textView_x = _replyView.frame.origin.x;
     }
+    
+    int minwidth = _timeLabel.frame.size.width + 10;
+    if([self showE2EIndicator]) minwidth += 25 + 10;
+    
+    if([self showE2EIndicator]) textView_w += 25 + 5;
+    
+    if(0 && tr.size.height < _messageLabel.frame.size.height && _messageLabel.frame.size.height > 1.75*single_line_height) {
+    }
+    
+    if(0 && textView_w < minwidth)
+        textView_w = minwidth;
     
     if([msg length]) {
         _messageLabel.frame = CGRectMake(textView_x, textView_y, textView_w, textView_h);
@@ -841,10 +1096,29 @@
     _messageLabel.autoresizingMask = globlResizing;
     pos_y +=_messageLabel.frame.size.height +4;
     
+    
+    // check if we can accomodate status in the last line of the text itself
+    if(tr.size.height < _messageLabel.frame.size.height && _messageLabel.frame.size.height > 1.75*single_line_height) {
+        pos_y -= single_line_height;
+    }
+    
+    CGRect headingFrame = _headingLabel.frame;
+    headingFrame.origin.x = textView_x;
+    _headingLabel.frame = headingFrame;
+    _headingLabel.autoresizingMask = globlResizing;
+    
 }
 
 #pragma mark - TimeLabel
 
+-(CGRect) measureHeight:(NSString *)text font:(UIFont *)font width:(int) width {
+    NSAttributedString *attributedText = [[NSAttributedString alloc] initWithString:text attributes:@{NSFontAttributeName: font}];
+    
+    // here instead of 200 we can use any thing like 250,300, 350 4000
+    return [attributedText boundingRectWithSize:(CGSize){(CGFloat)width, CGFLOAT_MAX}
+                                               options:NSStringDrawingUsesLineFragmentOrigin
+                                               context:nil];
+}
 
 -(void) measureTimeLabelFrame {
     NSString *text = [_uiData getTime];
@@ -862,16 +1136,32 @@
     
 }
 
-#define OUTGOING_TIME_RIGHT_MARGIN 25
+-(void) setTimeStatusBackground {
+    return;
+    
+    if([_message hasThumbnail]) {
+        NSString *t = [_uiData getTitle];
+        if(t || t.length) return;
+        
+        _timeLabel.backgroundColor = [UIColor grayColor];
+        _statusIcon.backgroundColor =  [UIColor grayColor];
+    }
+}
+
+#define STATUS_ICON_MARGIN      18
 #define INCOMING_TIME_RIGHT_MARGIN 5
+#define OUTGOING_TIME_RIGHT_MARGIN 23
+
 -(void)setTimeLabel {
     
-    //UIFont *fontz = [UIFont systemFontOfSize:14];
-    _timeLabel.textColor = [UIColor lightGrayColor];
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
+    
+    _timeLabel.textColor = [UIColor getColor:opts.timeTextColor];
     _timeLabel.font = [UIFont preferredFontForTextStyle:UIFontTextStyleFootnote];
     _timeLabel.userInteractionEnabled = NO;
-    //_timeLabel.alpha = 0.9;
     _timeLabel.textAlignment = NSTextAlignmentRight;
+    
+    [self setTimeStatusBackground];
     
     _timeLabel.text = [_uiData getTime];
     [_timeLabel sizeToFit];
@@ -883,21 +1173,17 @@
     NSString *msg = [_uiData getMessage];
     
     if (![_message isIncoming]) {
-        //additional 20 (25 vs 5) for message status icon
-        time_x = MAX ( _messageLabel.frame.origin.x + (_messageLabel.frame.size.width - _timeLabel.frame.size.width) - OUTGOING_TIME_RIGHT_MARGIN, _chatPicture.frame.origin.x + (_chatPicture.frame.size.width - _timeLabel.frame.size.width) - OUTGOING_TIME_RIGHT_MARGIN);
+        time_x = MAX ( _messageLabel.frame.origin.x + (_messageLabel.frame.size.width - _timeLabel.frame.size.width) - OUTGOING_TIME_RIGHT_MARGIN, _chatPicture.frame.origin.x + ([self getMessageWidth] - _timeLabel.frame.size.width) - OUTGOING_TIME_RIGHT_MARGIN);
         
     } else {
         time_x = MAX(_messageLabel.frame.origin.x + (_messageLabel.frame.size.width - _timeLabel.frame.size.width)-INCOMING_TIME_RIGHT_MARGIN,
-                     _chatPicture.frame.origin.x + (_chatPicture.frame.size.width - _timeLabel.frame.size.width));
+                     _chatPicture.frame.origin.x + ([self getMessageWidth] - _timeLabel.frame.size.width));
         
     }
     
-    if ([self isSingleLineCase] && msg.length != 0 && ![_uiData hasImage]  && ([[_uiData getTitle] length])==0) {
+    if ([self isSingleLineCase] && msg.length != 0 && ![_uiData hasThumbnail]  && ([[_uiData getTitle] length])==0) {
         time_x = _messageLabel.frame.origin.x + _messageLabel.frame.size.width + mFavoriteIconWidth ;
         time_y -= 20;  // take time view above when singlie line
-        //if (!_message.mIncoming)
-        //    time_x+=5;
-        
     }
     
     if([_message isIncoming]) {
@@ -909,10 +1195,12 @@
         
         
     }
-    if(_uiData.mIsReplyEnabled  ) {
-        time_x = _replyView.frame.origin.x + ((pic_max_witdh - _timeLabel.frame.size.width) - OUTGOING_TIME_RIGHT_MARGIN);
+    if([_uiData isReply]  ) {
+        time_x = _replyView.frame.origin.x + (pic_max_witdh - _timeLabel.frame.size.width);
+        if ([_message isOutgoing]) time_x -= OUTGOING_TIME_RIGHT_MARGIN;
         //time_y= time_y + _chatPicture.frame.size.height;
     }
+    
     mIstimeLabelOverPicture = NO ;
     if([[_uiData getTitle] length] == 0 ) {
         if(msg.length == 0 || [msg isEqualToString:@""] ) {
@@ -923,6 +1211,10 @@
         }
     }
     
+    if([self showE2EIndicator]) {
+        time_x -= STATUS_ICON_MARGIN; // for e2ee
+    }
+        
     _timeLabel.frame = CGRectMake(time_x,
                                   time_y,
                                   _timeLabel.frame.size.width,
@@ -940,13 +1232,34 @@
     CGFloat textView_width = _messageLabel.frame.size.width;
     CGFloat view_width = self.contentView.frame.size.width;
     
-    //Single Line Case
     return (textView_height <= SINGLIE_LINE_HEIGHT && textView_width + delta_x <= MAX_SIZE_TEXTWIDTH_PERCENTAGE*view_width)?YES:NO;
 }
 
 
 
 #pragma mark - Bubble
+
+- (void)setTitleView {
+    if([_uiData isReply] || [_message isCustom])
+        return;
+    
+    if(![_uiData getTitle].length && ![_uiData getSubTitle].length)
+        return;
+    
+    _mTitleViewFrame.origin.x = _bubbleView.frame.origin.x;
+    _mTitleViewFrame.size.width = _bubbleView.frame.size.width;
+    _titleView.frame = _mTitleViewFrame;
+    
+    MesiboUiDefaults *uio = [MesiboUI getUiDefaults];
+    if (![_message isIncoming]) {
+        _titleView.backgroundColor = [UIColor getColor:uio.titleBackgroundColorForMe];
+        
+    } else {
+        _titleView.backgroundColor = [UIColor getColor:uio.titleBackgroundColorForPeer];
+    }
+    
+    _titleView.autoresizingMask = globlResizing;
+}
 
 - (void)setBubble
 {
@@ -962,11 +1275,11 @@
     CGFloat bubble_width;
     CGFloat bubble_height =  MIN(_messageLabel.frame.size.height + 8,
                                  _timeLabel.frame.origin.y + _timeLabel.frame.size.height + 6);
-    if([_uiData hasImage]) {
+    if([_uiData hasThumbnail]) {
         bubble_height = _chatPicture.frame.size.height + bubble_height;
         
     }
-    if(_uiData.mIsReplyEnabled) {
+    if([_uiData isReply]) {
         bubble_height = _replyView.frame.size.height + bubble_height;
         
     }
@@ -974,34 +1287,55 @@
     NSString *msg = [_uiData getMessage];
     
     bubble_height = MAX ((CGRectGetMaxY(_timeLabel.frame)+5) ,(  CGRectGetMaxY(_chatPicture.frame)+7));
-    MesiboUiOptions *uio = [MesiboUI getUiOptions];
+    MesiboUiDefaults *uio = [MesiboUI getUiDefaults];
     
     if (![_message isIncoming]) {
         bubble_x = _timeLabel.frame.origin.x - 3;
+        if([[_uiData getTitle] length])
+            bubble_x = MIN(_titleLabel.frame.origin.x-3, bubble_x);
+        
+        if([[_uiData getSubTitle] length])
+            bubble_x = MIN(_subtitleLabel.frame.origin.x-3, bubble_x);
+        
         if([[_uiData getMessage] length])
             bubble_x = MIN(_messageLabel.frame.origin.x-3, bubble_x);
         
-        if([_uiData hasImage]) {
+        if([_uiData hasThumbnail]) {
             bubble_x = MIN(_chatPicture.frame.origin.x-3, bubble_x);
         }
-        if(_uiData.mIsReplyEnabled) {
+        if([_uiData isReply]) {
             bubble_x = MIN(_replyView.frame.origin.x-3, bubble_x);
             
         }
-        _bubbleChatImage.image = [MesiboImage bubbleImage:YES];
+
         bubble_width = self.contentView.frame.size.width - bubble_x - marginRight;
         bubble_x -= RIGHT_OUT_MARGIN;
         
         _bubbleView.backgroundColor = [UIColor getColor:uio.messageBackgroundColorForMe];
+        _titleView.backgroundColor = [UIColor getColor:uio.titleBackgroundColorForMe];
         
     } else {
         bubble_x = marginLeftOuter;
-        _bubbleChatImage.image = [MesiboImage bubbleImage:NO];
         bubble_width = MAX( CGRectGetMaxX(_timeLabel.frame)+marginRight,
-                           _chatPicture.frame.origin.x + _chatPicture.frame.size.width + marginRight);
+                           _chatPicture.frame.origin.x + [self getPictureWidth] + marginRight);
+        
+        if([_uiData isReply]) {
+            bubble_width = MAX(CGRectGetMaxX(_replyView.frame)+marginRight, bubble_width);
+        }
+        
+        if([self showE2EIndicator]) {
+            bubble_width += STATUS_ICON_MARGIN;
+        }
         
         _bubbleView.backgroundColor = [UIColor getColor:uio.messageBackgroundColorForPeer];
+        _titleView.backgroundColor = [UIColor getColor:uio.titleBackgroundColorForPeer];
         
+    }
+    
+    if([_message isForwarded]) {
+        
+        bubble_width = MAX( bubble_width,
+                           _headingLabel.frame.size.height + marginRight);
     }
     
     if([[_uiData getTitle] length] == 0 ) {
@@ -1012,40 +1346,36 @@
     }
     
     bubble_height +=BUBBLE_BOTTOM_MARGIN;
-    _bubbleChatImage.frame = CGRectMake(bubble_x, bubble_y, bubble_width, bubble_height);
-    _bubbleChatImage.autoresizingMask = globlResizing;
     
     //TBD, adjust as per the width and height of the cell
-    _bubbleView.layer.cornerRadius = 8;
+    _bubbleView.layer.cornerRadius = 6;
     _bubbleView.layer.shadowColor = [[UIColor grayColor] CGColor];
     _bubbleView.layer.shadowOffset = CGSizeMake(0, 0);
-    _bubbleView.layer.shadowRadius = 4.0;
+    _bubbleView.layer.shadowRadius = 3.0;
     _bubbleView.layer.shadowOpacity = 0.5;
     
     _bubbleView.frame = CGRectMake(bubble_x, bubble_y, bubble_width, bubble_height);
-    // Note, we are giving margin by incresing width by BUBBLE_BOTTOM_MARGIN in height()
-    // callback
-    //_bubbleView.bounds = CGRectInset(_bubbleView.frame, 10.0f, 10.0f);
     _bubbleView.autoresizingMask = globlResizing;
     
 }
 
 
 -(CGFloat) height {
-    if([_message isCustom] || [_message isMissedCall])
-        return _messageLabel.frame.size.height + 12;
+    if([_message isCustom] || [_message isMissedCall] || MESIBO_MSGSTATUS_E2E == [_message getStatus])
+        return _messageLabel.frame.size.height + CUSTOM_BUBBLE_BOTTOM_MARGIN + 5;
     
     if(MESSAGEVIEW_TIMESTAMP == [_uiData getType]) {
-        return _messageLabel.frame.size.height + 12;
+        return _messageLabel.frame.size.height + CUSTOM_BUBBLE_BOTTOM_MARGIN;
     }
     
+    //return _bubbleChatImage.frame.size.height;
     return _bubbleView.frame.size.height + BUBBLE_BOTTOM_MARGIN;
 }
 
 #pragma mark - StatusIcon
 
 -(void)addStatusIcon {
-    if([_message isIncoming] || [_message isDeleted]) return;
+    if(([_message isIncoming] && ![self showE2EIndicator]) || [_message isDeleted]) return;
     
     CGRect time_frame = _timeLabel.frame;
     CGRect status_frame = CGRectMake(0, 0, ICON_SIZE, ICON_SIZE);
@@ -1053,16 +1383,20 @@
     status_frame.origin.y = time_frame.origin.y +(time_frame.size.height/2)-HALF_ICON_SIZE;
     _statusIcon.frame = status_frame;
     _statusIcon.contentMode = UIViewContentModeScaleToFill;
-    //_statusIcon.frame = CGRectMake(status_frame.origin.x, status_frame.origin.y, 18, 18);
     _statusIcon.autoresizingMask = globlResizing  ;
     
 }
 
 
 -(void)setStatusIcon {
+    _statusIcon.hidden = NO;
+    
     if(![_message isIncoming])
         [self updateStatusIcon:_message.status];
-    _statusIcon.hidden = [_message isIncoming];
+    else if([self showE2EIndicator])
+        [MesiboImage setSecureIcon:_statusIcon];
+    else
+        _statusIcon.hidden = [_message isIncoming];
 }
 
 
@@ -1081,35 +1415,15 @@
 }
 
 -(void)addFavoriteIcon {
-#if 0
-    if(_uiData.mIsFavorite) {
-        _favoriteIcon.hidden = NO;
-        CGRect time_frame = _timeLabel.frame;
-        CGRect favorite_frame = CGRectMake(0, 0, ICON_SIZE, ICON_SIZE);
-        favorite_frame.origin.x = time_frame.origin.x - (favorite_frame.size.width + 3);
-        favorite_frame.origin.y = time_frame.origin.y +(time_frame.size.height/2)-HALF_ICON_SIZE;
-        
-        _favoriteIcon.frame = favorite_frame;
-        _favoriteIcon.contentMode = UIViewContentModeScaleToFill;
-        _favoriteIcon.autoresizingMask = globlResizing  ;
-        if(mIstimeLabelOverPicture)
-            _favoriteIcon.image = [MesiboImage getFavoriteImageOverPicture];
-        else
-            _favoriteIcon.image = [MesiboImage getFavoriteImage];
-    } else {
-        _favoriteIcon.hidden = YES;
-    }
-#endif
 }
 
-// We define delete: method so that our UIMenuController delete item shows up
 - (void)delete:(nullable id)sender {
     [super delete:self];
     return;
 }
 
 - (void)resend:(id)sender {
-    [MesiboInstance resend:(uint32_t)_message.mid];
+    [_message resend];
     
 }
 
@@ -1127,29 +1441,33 @@
 }
 
 - (void)favorite:(id)sender {
-    //MessageViewController *cv = (MessageViewController *) [self getParent];
-    //[cv favorite:self];
+}
+
+-(void) encryption:(id) sender {
+    uint32_t gid = _message.groupid;
+    NSString *addr = _message.peer;
     
+    MesiboProfile *profile = [MesiboInstance getProfile:gid?nil:addr groupid:gid];
+    [MesiboUI showEndToEncEncryptionInfo:[self getParent] profile:profile];
 }
 
 - (void)copy:(id)sender {
     MesiboTableController *cv = [self getTableController];
     [cv copy:self];
     UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
-    if(_message.media)
+    if([_message hasThumbnail])
         pasteboard.image = [_uiData getImage];
     else
-        pasteboard.string = [_message getMessageAsString];
+        pasteboard.string = [_uiData getMessage];
     
 }
 
-//https://zearfoss.wordpress.com/2013/05/22/masterin-copy-and-paste-in-your-ios-app/
 -(BOOL) canPerformAction:(SEL)action withSender:(id)sender {
     if(MESSAGEVIEW_MESSAGE != [_uiData getType])
         return NO;
     
     BOOL ret = (action == @selector(copy:) || action == @selector(delete:) ||
-                action == @selector(share:) || action == @selector(favorite:))  ;
+                action == @selector(share:) || action == @selector(favorite:) || action == @selector(encryption:))  ;
     if(ret) return YES;
     
     if(action == @selector(forward:) || action == @selector(reply:)) {
@@ -1171,32 +1489,51 @@
 
 - (void)setSelected:(BOOL)selected animated:(BOOL)animated {
     [super setSelected:selected animated:animated];
-    
-    // Configure the view for the selected state
 }
 
+-(void) openUrl:(NSString *) urlstr {
+    if(!urlstr) return;
+    UIApplication *application = [UIApplication sharedApplication];
+    NSURL *url = [NSURL URLWithString:urlstr];
+    [application openURL:url options:@{} completionHandler:nil];
+}
 
 -(void)openAppleMap:(CLLocationCoordinate2D) cordinates {
-    //Apple Maps, using the MKMapItem class
-    
     MKPlacemark *placemark = [[MKPlacemark alloc] initWithCoordinate:cordinates addressDictionary:nil];
     MKMapItem *item = [[MKMapItem alloc] initWithPlacemark:placemark];
     item.name = [_uiData getTitle];
     [item openInMapsWithLaunchOptions:nil];
 }
 
+-(void)openGoogleMap:(CLLocationCoordinate2D) cordinates {
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"comgooglemaps://?center=%f,%f",cordinates.latitude,cordinates.longitude]];
+    UIApplication *application = [UIApplication sharedApplication];
+    [application openURL:url options:@{} completionHandler:nil];
+}
+
 -(void)openActionSheet:(id)sender {
-    BOOL canHandleGoogleMap = [[UIApplication sharedApplication] canOpenURL: [NSURL URLWithString:@"comgooglemaps:"]];
+    MesiboUiDefaults *opts = [MesiboUI getUiDefaults];
     
+    CLLocationCoordinate2D rdOfficeLocation = CLLocationCoordinate2DMake(_message.latitude,_message.longitude);
     
-    CLLocationCoordinate2D rdOfficeLocation = CLLocationCoordinate2DMake(_message.media.location.lat,_message.media.location.lon);
-    
-    if(!canHandleGoogleMap) {
+    if(LOCATION_APP_APPLE == opts.preferredLocationApp) {
         [self openAppleMap:rdOfficeLocation];
         return;
     }
     
-    //give the user a choice of Apple or Google Maps
+    BOOL canHandleGoogleMap = [[UIApplication sharedApplication] canOpenURL:[NSURL URLWithString:@"comgooglemaps://"]];
+    
+    if(!canHandleGoogleMap) {
+        NSLog(@"Unable to use Google Map. Add \"comgooglemaps\" in LSApplicationQueriesSchemes and try again. Refer to the LSApplicationQueriesSchemes documentation for details");
+        [self openAppleMap:rdOfficeLocation];
+        return;
+    }
+    
+    if(LOCATION_APP_GOOGLEMAP == opts.preferredLocationApp) {
+        [self openGoogleMap:rdOfficeLocation];
+        return;
+    }
+    
     UIAlertController * view=   [UIAlertController
                                  alertControllerWithTitle:@"Open Map Option"
                                  message:@""
@@ -1204,21 +1541,20 @@
     
     UIAlertAction* googlemap = [UIAlertAction actionWithTitle:@"Google Map" style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
         //construct a URL using the comgooglemaps schema
-        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"comgooglemaps://?center=%f,%f",rdOfficeLocation.latitude,rdOfficeLocation.longitude]];
-        if (![[UIApplication sharedApplication] canOpenURL:url]) {
-            NSLog(@"Google Maps app is not installed");
-            //left as an exercise for the reader: open the Google Maps mobile website instead!
-        } else {
-            UIApplication *application = [UIApplication sharedApplication];
-            [application openURL:url options:@{} completionHandler:nil];
+        if(LOCATION_APP_PROMPTONCE == opts.preferredLocationApp) {
+            opts.preferredLocationApp = LOCATION_APP_GOOGLEMAP;
         }
-        
+        [self openGoogleMap:rdOfficeLocation];
         //Do some thing here
         [view dismissViewControllerAnimated:YES completion:nil];
         
     }];
     
     UIAlertAction* applemap = [UIAlertAction actionWithTitle:@"Apple Map" style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
+        
+        if(LOCATION_APP_PROMPTONCE == opts.preferredLocationApp) {
+            opts.preferredLocationApp = LOCATION_APP_APPLE;
+        }
         
         [self openAppleMap:rdOfficeLocation];
         //Do some thing here
@@ -1232,18 +1568,13 @@
         
     }];
     
-    
-    if(canHandleGoogleMap) {
-        
-        [view addAction:googlemap];
-    }
     [view addAction:applemap];
+    [view addAction:googlemap];
     
     [view addAction:cancel];
     [[self getParent] presentViewController:view animated:YES completion:nil];
     
 }
-
 
 @end
 

@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -62,12 +62,10 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface MesiboTableController : NSObject <MesiboDelegate, UITableViewDelegate , UITableViewDataSource>
 
--(void) setup:(id)parent tableView:(UITableView *)tableView model:(MesiboMessageModel *)model delegate:(id)delegate uidelegate:(id)uidelegate;
+-(void) setup:(id)parent screen:(MesiboMessageScreen *)screen model:(MesiboMessageModel *)model delegate:(id)delegate uidelegate:(id)uidelegate;
 
 -(void) insert:(MesiboMessage *) m;
-//-(id) get:(int)row;
 
-//-(void) setPeer:(NSString *)peer groupid:(uint32_t)groupid query:(NSString *)query;
 -(void) start;
 -(void) stop;
 
@@ -78,7 +76,6 @@ NS_ASSUME_NONNULL_BEGIN
 -(void) reloadRow:(NSInteger)row;
 -(void) reloadRows:(NSArray *)rows;
 -(void) reloadRows:(NSInteger)start end:(NSInteger)end;
-//-(void) reloadMessage:(id)m;
 
 -(BOOL) isSelectionMode;
 -(void) addSelectedMessage:(id)data;

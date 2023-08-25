@@ -1,4 +1,4 @@
-/** Copyright (c) 2019 Mesibo
+/** Copyright (c) 2023 Mesibo, Inc
  * https://mesibo.com
  * All rights reserved.
  *
@@ -40,30 +40,26 @@
  */
 
 #import <UIKit/UIKit.h>
-//#import "MessageData.h"
 #import "Includes.h"
 #import "MesiboUI.h"
 #import "MesiboMessageViewController.h"
 #import "UserData.h"
 
-#define USERLIST_EDIT_GROUP_MODE 4
-#define USERLIST_SELECTION_GROUP 3
-#define USERLIST_FORWARD_MODE  2
-#define USERLIST_MESSAGE_MODE  5
-#define USERLIST_CONTACTS_MODE  1
 
 @interface UserListViewController : UITableViewController <MesiboDelegate,UITableViewDelegate,UITableViewDataSource,UISearchBarDelegate,UISearchDisplayDelegate,UISearchControllerDelegate,UISearchBarDelegate, UISearchResultsUpdating>
 
 @property (strong, nonatomic) IBOutlet UITableView *mUsersTableView;
 
-@property (assign,nonatomic) int mNewContactChooser;
-@property (strong, nonatomic) NSArray * fwdMessage;
+@property (assign,nonatomic) int mMode;
+@property (strong, nonatomic) NSArray * forwardIds;
 @property (nonatomic, strong) UISearchController * searchController;
-@property (assign, nonatomic) BOOL mGroupBackEdit;
-
-//@property (strong, nonatomic) NSString* mMemberList;
 @property (assign, nonatomic) uint32_t mForwardGroupid ;
-@property (weak, nonatomic) id mUiDelegate ;
+
+@property (strong, nonatomic) MesiboUserListScreenOptions *mOpts;
+
+
+@property (strong, nonatomic) id<MesiboUIListener> mUiDelegate ;
+@property (strong, nonatomic) id<MesiboUIListener> mUiDelegateForMessageView ;
 
 
 -(void) barButtonBackPressed:(id)sender;
